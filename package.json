@@ -1,8 +1,12 @@
 {
 	"name": "FileHarmony",
 	"displayName": "File Harmony",
-	"description": "An extension to keeps files in sync between two folders.",
-	"publisher": "Amir Zouerami",
+	"description": "A simple vscode extension to keep two directories in sync",
+	"publisher": "zouerami",
+	"author": {
+		"name": "Amir Zouerami",
+		"url": "https://github.com/Amir-Zouerami"
+	},
 	"version": "1.0.0",
 	"engines": {
 		"vscode": "^1.95.0"
@@ -14,6 +18,13 @@
 		"onStartupFinished"
 	],
 	"main": "./out/extension.js",
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:Amir-Zouerami/FileHarmony.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Amir-Zouerami/FileHarmony/issues"
+	},
 	"contributes": {
 		"commands": [
 			{
