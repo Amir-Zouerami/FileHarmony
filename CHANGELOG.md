@@ -10,6 +10,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [1.0.0] - 2024-11-29
 
+### Fixed
+- an error finding the initial webview html was fixed.
+
+## [1.0.0] - 2024-11-30
+
 ### Added
 - v1.0 Initial mechanism and functionality implemented.
 
