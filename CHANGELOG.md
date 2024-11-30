@@ -8,12 +8,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 
-## [1.0.0] - 2024-11-29
+## [1.1.0] - 2024-11-30
+
+### Added
+- completed the `README.md` file with a short explanation about the extension.
+
+### Changed
+- lowered the minimum supported vscode version to `1.54.0`.
+
+
+## [1.0.1] - 2024-11-29
 
 ### Fixed
 - an error finding the initial webview html was fixed.
 
-## [1.0.0] - 2024-11-30
+
+## [1.0.0] - 2024-11-29
 
 ### Added
 - v1.0 Initial mechanism and functionality implemented.
