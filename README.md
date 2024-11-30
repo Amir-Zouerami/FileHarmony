@@ -9,7 +9,7 @@ A simple vscode extension to keep two directories in sync.
 
 Simply install the extension. A folder icon should appear on your primary activity bar:
 
-![File Harmony icon on activity bar](./README-resources/01-Activity-Bar-Icon.jpg)
+![File Harmony icon on activity bar](https://raw.githubusercontent.com/Amir-Zouerami/FileHarmony/refs/heads/main/README-resources/01-Activity-Bar-Icon.jpg)
 
 clicking on this icon (highlighted by the red circle) opens the control panel for File Harmony. There are 5 main elements in this panel:
 
