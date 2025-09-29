@@ -1,7 +1,7 @@
-import WorkspaceStateManager from '../stateManager/WorkspaceStateManager';
-import MessageHandler from './MessageHandler';
-import { Message } from '../types/Message';
-import * as vscode from 'vscode';
+import type WorkspaceStateManager from '../services/WorkspaceStateManager';
+import type MessageHandler from './MessageHandler';
+import type { Message } from '../types/Message';
+import type * as vscode from 'vscode';
 import path from 'node:path';
 import fs from 'node:fs';
 
@@ -15,7 +15,10 @@ class FileHarmonyViewProvider implements vscode.WebviewViewProvider {
 	constructor(context: vscode.ExtensionContext, messageHandler: MessageHandler, stateManager: WorkspaceStateManager) {
 		this.stateManager = stateManager;
 		this.messageHandler = messageHandler;
-		this.initialHTML = fs.readFileSync(path.join(context.extensionPath, 'src', 'pages', 'control-panel.html'), 'utf-8');
+		this.initialHTML = fs.readFileSync(
+			path.join(context.extensionPath, 'src', 'ui', 'pages', 'control-panel.html'),
+			'utf-8',
+		);
 	}
 
 	resolveWebviewView(webviewView: vscode.WebviewView) {
@@ -47,7 +50,10 @@ class FileHarmonyViewProvider implements vscode.WebviewViewProvider {
 	}
 
 	dispose() {
-		this.disposables.forEach(disposable => disposable.dispose());
+		for (const disposable of this.disposables) {
+			disposable.dispose();
+		}
+
 		this.disposables = [];
 		this._view = undefined;
 	}

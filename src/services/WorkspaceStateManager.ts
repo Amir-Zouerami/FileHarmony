@@ -1,5 +1,5 @@
-import * as vscode from 'vscode';
-import { WorkspaceState } from '../types/WorkspaceState';
+import type * as vscode from 'vscode';
+import type { WorkspaceState } from '../types/WorkspaceState';
 
 class WorkspaceStateManager {
 	private defaultState: WorkspaceState;

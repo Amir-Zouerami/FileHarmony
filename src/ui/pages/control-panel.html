@@ -54,10 +54,32 @@
 				color: #f5f5f5;
 				outline: none;
 				transition: box-shadow 0.3s ease;
+				flex-grow: 1;
 			}
 
 			input[type='text']:focus {
 				box-shadow: 0 0 10px #404c8d;
+			}
+
+			.input-group {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.browse-button {
+				padding: 0.8rem 1rem;
+				border: none;
+				border-radius: 7px;
+				background-color: #3a6073;
+				color: white;
+				cursor: pointer;
+				font-weight: bold;
+				transition: background-color 0.3s ease;
+			}
+
+			.browse-button:hover {
+				background-color: #4a7a91;
 			}
 
 			.switch {
@@ -163,6 +185,21 @@
 				color: #fff;
 				text-decoration: none;
 			}
+
+			@media (max-width: 350px) {
+				.input-group {
+					flex-direction: column;
+					align-items: stretch; /* Makes input and button full width */
+				}
+
+				h1 {
+					font-size: 1.5rem; /* Slightly smaller title on narrow screens */
+				}
+
+				.container {
+					padding: 10px; /* Reduce padding to save space */
+				}
+			}
 		</style>
 	</head>
 
@@ -172,12 +209,18 @@
 
 			<div class="form-group">
 				<label for="sourcePath">Source Path</label>
-				<input type="text" id="sourcePath" placeholder="e.g. /some/path/to/source/directory" />
+				<div class="input-group">
+					<input type="text" id="sourcePath" placeholder="Select a source directory..." readonly />
+					<button class="browse-button" id="browseSource">Browse...</button>
+				</div>
 			</div>
 
 			<div class="form-group">
 				<label for="targetPath">Target Path</label>
-				<input type="text" id="targetPath" placeholder="e.g. ../../target/directory" />
+				<div class="input-group">
+					<input type="text" id="targetPath" placeholder="Select a target directory..." readonly />
+					<button class="browse-button" id="browseTarget">Browse...</button>
+				</div>
 			</div>
 
 			<div class="form-group">
@@ -202,11 +245,17 @@
 			const vscode = acquireVsCodeApi();
 			vscode.postMessage({ command: 'GET_STATE' });
 
-			function renderIgnoreList(ignoreList) {
-				const ignoreListElement = document.getElementById('ignoreList');
-				ignoreListElement.innerHTML = '';
+			// --- Elements ---
+			const sourcePathInput = document.getElementById('sourcePath');
+			const targetPathInput = document.getElementById('targetPath');
+			const ignoreListInput = document.getElementById('ignoreListInput');
+			const syncStatusCheckbox = document.getElementById('syncStatus');
+			const ignoreListElement = document.getElementById('ignoreList');
 
+			function renderIgnoreList(ignoreList) {
+				ignoreListElement.innerHTML = '';
 				const uniqueIgnoreList = [...new Set(ignoreList)];
+
 				uniqueIgnoreList.forEach(listItem => {
 					if (listItem) {
 						const div = document.createElement('div');
@@ -218,7 +267,7 @@
 						removeButton.textContent = 'x';
 						removeButton.addEventListener('click', () => {
 							const updatedList = uniqueIgnoreList.filter(p => p !== listItem);
-							document.getElementById('ignoreListInput').value = updatedList.join(',');
+							ignoreListInput.value = updatedList.join(',');
 							renderIgnoreList(updatedList);
 						});
 
@@ -228,30 +277,43 @@
 				});
 			}
 
+			document.getElementById('browseSource').addEventListener('click', () => {
+				vscode.postMessage({ command: 'SELECT_FOLDER', payload: { for: 'source' } });
+			});
+
+			document.getElementById('browseTarget').addEventListener('click', () => {
+				vscode.postMessage({ command: 'SELECT_FOLDER', payload: { for: 'target' } });
+			});
+
 			document.getElementById('save').addEventListener('click', async () => {
-				const currIgnoreList = document.getElementById('ignoreListInput').value.split(',');
-
+				const currIgnoreList = ignoreListInput.value.split(',');
 				const newState = {
-					sourcePath: document.getElementById('sourcePath').value,
-					targetPath: document.getElementById('targetPath').value,
-					ignoreList: currIgnoreList.length === 0 ? ['node_modules', '.vscode', '.idea', '.git'] : currIgnoreList,
-					syncStatus: document.getElementById('syncStatus').checked,
+					sourcePath: sourcePathInput.value,
+					targetPath: targetPathInput.value,
+					ignoreList:
+						currIgnoreList.length === 0 ? ['node_modules', '.vscode', '.idea', '.git'] : currIgnoreList,
+					syncStatus: syncStatusCheckbox.checked,
 				};
-
 				await vscode.postMessage({ command: 'UPDATE_STATE', value: newState });
-				await vscode.postMessage({ command: 'GET_STATE' });
 			});
 
 			window.addEventListener('message', event => {
 				const message = event.data;
 
 				if (message.command === 'UPDATE_WEBVIEW') {
-					document.getElementById('sourcePath').value = message.value.sourcePath;
-					document.getElementById('targetPath').value = message.value.targetPath;
-					document.getElementById('ignoreListInput').value = message.value.ignoreList.join(',');
-					document.getElementById('syncStatus').checked = message.value.syncStatus;
-
+					sourcePathInput.value = message.value.sourcePath;
+					targetPathInput.value = message.value.targetPath;
+					ignoreListInput.value = message.value.ignoreList.join(',');
+					syncStatusCheckbox.checked = message.value.syncStatus;
 					renderIgnoreList(message.value.ignoreList);
+				}
+
+				if (message.command === 'FOLDER_SELECTED') {
+					if (message.payload.for === 'source') {
+						sourcePathInput.value = message.payload.path;
+					} else if (message.payload.for === 'target') {
+						targetPathInput.value = message.payload.path;
+					}
 				}
 			});
 		</script>
