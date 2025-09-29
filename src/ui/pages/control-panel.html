@@ -1,206 +1,14 @@
+<!DOCTYPE html>
 <html lang="en">
 	<head>
 		<meta charset="UTF-8" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="default-src 'none'; style-src #{cspSource}; script-src #{cspSource};"
+		/>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link href="#{stylesUri}" rel="stylesheet" />
 		<title>File Harmony</title>
-		<style>
-			body {
-				font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-				margin: 0;
-				padding: 0;
-				background-size: cover;
-				color: #f5f5f5;
-				display: flex;
-				flex-direction: column;
-				align-items: center;
-				justify-content: center;
-				height: 100vh;
-				overflow: hidden;
-				backdrop-filter: blur(5px);
-			}
-
-			.container {
-				border-radius: 10px;
-				width: 90%;
-				max-width: 500px;
-				padding: 20px;
-				box-sizing: border-box;
-			}
-
-			h1 {
-				font-size: 2rem;
-				text-align: center;
-				margin-bottom: 1.5rem;
-			}
-
-			.form-group {
-				display: flex;
-				flex-direction: column;
-				margin-bottom: 1.2rem;
-			}
-
-			label {
-				font-weight: bold;
-				margin-bottom: 0.5rem;
-				font-size: 1rem;
-			}
-
-			input[type='text'] {
-				padding: 0.8rem;
-				border: none;
-				border-radius: 7px;
-				font-size: 0.9rem;
-				background: rgba(30, 30, 30, 0.9);
-				color: #f5f5f5;
-				outline: none;
-				transition: box-shadow 0.3s ease;
-				flex-grow: 1;
-			}
-
-			input[type='text']:focus {
-				box-shadow: 0 0 10px #404c8d;
-			}
-
-			.input-group {
-				display: flex;
-				align-items: center;
-				gap: 8px;
-			}
-
-			.browse-button {
-				padding: 0.8rem 1rem;
-				border: none;
-				border-radius: 7px;
-				background-color: #3a6073;
-				color: white;
-				cursor: pointer;
-				font-weight: bold;
-				transition: background-color 0.3s ease;
-			}
-
-			.browse-button:hover {
-				background-color: #4a7a91;
-			}
-
-			.switch {
-				position: relative;
-				display: inline-block;
-				width: 52px;
-				height: 28px;
-			}
-
-			.switch input {
-				opacity: 0;
-				width: 0;
-				height: 0;
-			}
-
-			.slider {
-				position: absolute;
-				cursor: pointer;
-				top: 0;
-				left: 0;
-				right: 0;
-				bottom: 0;
-				background-color: #ccc;
-				transition: 0.4s;
-				border-radius: 34px;
-			}
-
-			.slider:before {
-				position: absolute;
-				content: '';
-				height: 20px;
-				width: 20px;
-				left: 4px;
-				bottom: 4px;
-				background-color: white;
-				transition: 0.4s;
-				border-radius: 50%;
-			}
-
-			input:checked + .slider {
-				background-color: #2196f3;
-			}
-
-			input:checked + .slider:before {
-				transform: translateX(26px);
-			}
-
-			.button {
-				display: inline-block;
-				width: 100%;
-				color: #121212;
-				padding: 0.75rem;
-				border: none;
-				border-radius: 4px;
-				font-size: 1rem;
-				font-weight: bold;
-				text-align: center;
-				cursor: pointer;
-				margin-top: 1rem;
-				transition: background 0.3s ease, transform 0.2s ease;
-			}
-
-			.remove-button {
-				border-radius: 50%;
-				background-color: #5a5d85;
-				border: none;
-				color: white;
-				margin-left: 4px;
-				font-weight: bold;
-				cursor: pointer;
-			}
-
-			.remove-button:hover {
-				background-color: #333989;
-			}
-
-			.ignore-pattern {
-				padding: 5px;
-				display: inline-block;
-				background-color: #303037;
-				border-radius: 10px;
-				margin: 5px;
-				font-weight: bold;
-			}
-
-			.btn-grad {
-				background-image: linear-gradient(to right, #16222a 0%, #3a6073 51%, #16222a 100%);
-			}
-			.btn-grad {
-				margin: 10px;
-				padding: 15px 45px;
-				text-align: center;
-				text-transform: uppercase;
-				transition: 0.5s;
-				background-size: 200% auto;
-				color: white;
-				border-radius: 10px;
-				display: block;
-			}
-
-			.btn-grad:hover {
-				background-position: right center;
-				color: #fff;
-				text-decoration: none;
-			}
-
-			@media (max-width: 350px) {
-				.input-group {
-					flex-direction: column;
-					align-items: stretch; /* Makes input and button full width */
-				}
-
-				h1 {
-					font-size: 1.5rem; /* Slightly smaller title on narrow screens */
-				}
-
-				.container {
-					padding: 10px; /* Reduce padding to save space */
-				}
-			}
-		</style>
 	</head>
 
 	<body>
@@ -224,11 +32,42 @@
 			</div>
 
 			<div class="form-group">
-				<label for="ignoreListInput">Ignore List <span style="font-size: small">(comma-separated)</span></label>
-				<input type="text" id="ignoreListInput" placeholder="e.g., node_modules,.git" />
+				<label for="ignoreListInput">
+					Ignore List <span class="extra-small-mono-text">&nbsp;(comma-separated)</span>
+				</label>
+				<input type="text" id="ignoreListInput" placeholder="e.g., node_modules, **/*.tmp, dist" />
 				<div class="ignore-patterns" id="ignoreList"></div>
-				<p style="font-size: small">Ignore List does not support patterns.</p>
+				<p style="font-size: small">
+					Supports glob patterns (e.g., <code>**/node_modules</code>, <code>*.log</code>).
+				</p>
 			</div>
+
+			<div class="break-horizontal-line"></div>
+
+			<div class="form-group">
+				<label>
+					Sync Mode
+					<span class="tooltip">
+						(?)
+						<span class="tooltip-text">
+							<b>Smart (Default):</b> Overwrites files only if the source is newer. Faster and
+							recommended. <br /><br />
+							<b>Force Overwrite:</b> Overwrites all matching files in the target directory, ensuring an
+							exact replica. Slower but more thorough.
+						</span>
+					</span>
+				</label>
+
+				<div class="segmented-control">
+					<input type="radio" id="syncModeSmart" name="syncMode" value="smart" checked />
+					<label for="syncModeSmart">Smart</label>
+
+					<input type="radio" id="syncModeForce" name="syncMode" value="force" />
+					<label for="syncModeForce">Force Overwrite</label>
+				</div>
+			</div>
+
+			<div class="break-horizontal-line"></div>
 
 			<div class="form-group">
 				<label for="syncStatus">Sync Status</label>
@@ -241,81 +80,6 @@
 			<button class="button btn-grad" id="save">Save</button>
 		</div>
 
-		<script>
-			const vscode = acquireVsCodeApi();
-			vscode.postMessage({ command: 'GET_STATE' });
-
-			// --- Elements ---
-			const sourcePathInput = document.getElementById('sourcePath');
-			const targetPathInput = document.getElementById('targetPath');
-			const ignoreListInput = document.getElementById('ignoreListInput');
-			const syncStatusCheckbox = document.getElementById('syncStatus');
-			const ignoreListElement = document.getElementById('ignoreList');
-
-			function renderIgnoreList(ignoreList) {
-				ignoreListElement.innerHTML = '';
-				const uniqueIgnoreList = [...new Set(ignoreList)];
-
-				uniqueIgnoreList.forEach(listItem => {
-					if (listItem) {
-						const div = document.createElement('div');
-						div.className = 'ignore-pattern';
-						div.textContent = listItem;
-
-						const removeButton = document.createElement('button');
-						removeButton.className = 'remove-button';
-						removeButton.textContent = 'x';
-						removeButton.addEventListener('click', () => {
-							const updatedList = uniqueIgnoreList.filter(p => p !== listItem);
-							ignoreListInput.value = updatedList.join(',');
-							renderIgnoreList(updatedList);
-						});
-
-						div.appendChild(removeButton);
-						ignoreListElement.appendChild(div);
-					}
-				});
-			}
-
-			document.getElementById('browseSource').addEventListener('click', () => {
-				vscode.postMessage({ command: 'SELECT_FOLDER', payload: { for: 'source' } });
-			});
-
-			document.getElementById('browseTarget').addEventListener('click', () => {
-				vscode.postMessage({ command: 'SELECT_FOLDER', payload: { for: 'target' } });
-			});
-
-			document.getElementById('save').addEventListener('click', async () => {
-				const currIgnoreList = ignoreListInput.value.split(',');
-				const newState = {
-					sourcePath: sourcePathInput.value,
-					targetPath: targetPathInput.value,
-					ignoreList:
-						currIgnoreList.length === 0 ? ['node_modules', '.vscode', '.idea', '.git'] : currIgnoreList,
-					syncStatus: syncStatusCheckbox.checked,
-				};
-				await vscode.postMessage({ command: 'UPDATE_STATE', value: newState });
-			});
-
-			window.addEventListener('message', event => {
-				const message = event.data;
-
-				if (message.command === 'UPDATE_WEBVIEW') {
-					sourcePathInput.value = message.value.sourcePath;
-					targetPathInput.value = message.value.targetPath;
-					ignoreListInput.value = message.value.ignoreList.join(',');
-					syncStatusCheckbox.checked = message.value.syncStatus;
-					renderIgnoreList(message.value.ignoreList);
-				}
-
-				if (message.command === 'FOLDER_SELECTED') {
-					if (message.payload.for === 'source') {
-						sourcePathInput.value = message.payload.path;
-					} else if (message.payload.for === 'target') {
-						targetPathInput.value = message.payload.path;
-					}
-				}
-			});
-		</script>
+		<script src="#{scriptUri}"></script>
 	</body>
 </html>

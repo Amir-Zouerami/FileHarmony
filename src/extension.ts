@@ -21,14 +21,14 @@ export async function activate(context: vscode.ExtensionContext) {
 	context.subscriptions.push(vscode.window.registerWebviewViewProvider('fileHarmonyView', provider));
 
 	// --- Initial Status on Activation ---
-	const { sourcePath, targetPath, ignoreList, syncStatus } = stateManager.getState();
+	const { syncStatus } = stateManager.getState();
 	statusBarManager.update(syncStatus ? 'active' : 'inactive');
 
 	if (syncStatus) {
 		try {
 			statusBarManager.update('syncing');
 
-			await syncManager.initialDirectorySync(sourcePath, targetPath, ignoreList, syncStatus);
+			await syncManager.initialDirectorySync();
 			await syncManager.addSyncWatcher();
 
 			statusBarManager.update('active');

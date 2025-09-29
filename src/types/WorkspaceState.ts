@@ -3,4 +3,5 @@ export interface WorkspaceState {
 	targetPath: string;
 	syncStatus: boolean;
 	ignoreList: string[];
+	syncMode: 'smart' | 'force';
 }

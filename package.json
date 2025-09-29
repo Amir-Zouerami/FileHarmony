@@ -65,6 +65,7 @@
 		"test": "vscode-test"
 	},
 	"devDependencies": {
+		"@types/micromatch": "^4.0.9",
 		"@types/mocha": "^10.0.9",
 		"@types/node": "20.x",
 		"@types/vscode": "^1.54.0",
@@ -76,6 +77,7 @@
 		"typescript": "^5.6.3"
 	},
 	"dependencies": {
-		"chokidar": "^4.0.1"
+		"chokidar": "^4.0.1",
+		"micromatch": "^4.0.8"
 	}
 }
