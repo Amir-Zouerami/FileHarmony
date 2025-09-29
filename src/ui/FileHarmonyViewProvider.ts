@@ -1,4 +1,5 @@
 import type WorkspaceStateManager from '../services/WorkspaceStateManager';
+import type { WorkspaceState } from '../types/WorkspaceState';
 import type MessageHandler from './MessageHandler';
 import type { Message } from '../types/Message';
 import * as vscode from 'vscode';
@@ -32,6 +33,21 @@ class FileHarmonyViewProvider implements vscode.WebviewViewProvider {
 				await this.messageHandler.invokeMatchingMessageHandler(message, this._view);
 			}),
 		);
+	}
+
+	public postLogToWebview(logMessage: string) {
+		if (this._view) {
+			this._view.webview.postMessage({
+				command: 'LOG_UPDATED',
+				payload: logMessage,
+			});
+		}
+	}
+
+	public updateWebviewWithState(state: WorkspaceState) {
+		if (this._view) {
+			this.messageHandler.notifyWebViewToUpdate(state, this._view);
+		}
 	}
 
 	updateWebview() {

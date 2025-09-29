@@ -14,6 +14,7 @@ class WorkspaceStateManager {
 			ignoreList: ['node_modules', '.vscode', '.idea', '.git', 'dist'],
 			syncStatus: false,
 			syncMode: 'smart',
+			lastSynced: null,
 		};
 	}
 
@@ -23,6 +24,10 @@ class WorkspaceStateManager {
 		// backwards compatibility for older versions
 		if (!currState.syncMode) {
 			currState.syncMode = this.defaultState.syncMode;
+		}
+
+		if (currState.lastSynced === undefined) {
+			currState.lastSynced = this.defaultState.lastSynced;
 		}
 
 		return currState;

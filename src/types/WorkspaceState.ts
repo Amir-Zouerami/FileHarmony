@@ -4,4 +4,5 @@ export interface WorkspaceState {
 	syncStatus: boolean;
 	ignoreList: string[];
 	syncMode: 'smart' | 'force';
+	lastSynced: string | null;
 }

@@ -37,8 +37,19 @@ class MessageHandler {
 				await this.selectFolderMessageHandler(message, view);
 				break;
 			}
+			case 'SYNC_NOW': {
+				this.logger.info('Manual sync requested by user.');
+				// We execute a command to show the status bar, keeping this class clean.
+				vscode.commands.executeCommand('fileHarmony.syncNowWithFeedback');
+				break;
+			}
+			case 'SHOW_LOG_VIEWER': {
+				vscode.commands.executeCommand('fileHarmony.showLogViewer');
+				break;
+			}
 		}
 	}
+
 	notifyWebViewToUpdate(newState: WorkspaceState, view: vscode.WebviewView | undefined) {
 		view?.webview.postMessage({ command: 'UPDATE_WEBVIEW', value: newState });
 	}

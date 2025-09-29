@@ -1,0 +1,2094 @@
+i am writing a vscode extension. it keeps two directories in sync. here is the code for it:
+
+the structure:
+
+```
+tree -I node_modules
+.
+├── biome.jsonc
+├── CHANGELOG.md
+├── eslint.config.mjs
+├── export-project.js
+├── icon.png
+├── image.png
+├── LICENSE
+├── out
+│   ├── commands
+│   │   ├── index.js
+│   │   └── index.js.map
+│   ├── extension.js
+│   ├── extension.js.map
+│   ├── logger
+│   │   ├── Logger.js
+│   │   └── Logger.js.map
+│   ├── services
+│   │   ├── SyncManager.js
+│   │   ├── SyncManager.js.map
+│   │   ├── WorkspaceStateManager.js
+│   │   └── WorkspaceStateManager.js.map
+│   ├── stateManager
+│   │   ├── WorkspaceStateManager.js
+│   │   └── WorkspaceStateManager.js.map
+│   ├── statusBar
+│   │   ├── StatusBarManager.js
+│   │   └── StatusBarManager.js.map
+│   ├── SyncManager.js
+│   ├── SyncManager.js.map
+│   ├── test
+│   │   ├── extension.test.js
+│   │   └── extension.test.js.map
+│   ├── types
+│   │   ├── Message.js
+│   │   ├── Message.js.map
+│   │   ├── WorkspaceState.js
+│   │   └── WorkspaceState.js.map
+│   ├── ui
+│   │   ├── FileHarmonyViewProvider.js
+│   │   ├── FileHarmonyViewProvider.js.map
+│   │   ├── LogViewerPanelManager.js
+│   │   ├── LogViewerPanelManager.js.map
+│   │   ├── MessageHandler.js
+│   │   └── MessageHandler.js.map
+│   ├── utils.js
+│   ├── utils.js.map
+│   └── webViewProviders
+│       ├── FileHarmonyViewProvider.js
+│       ├── FileHarmonyViewProvider.js.map
+│       ├── MessageHandler.js
+│       └── MessageHandler.js.map
+├── package.json
+├── package-lock.json
+├── project_dump.txt
+├── README.md
+├── README-resources
+│   └── 01-Activity-Bar-Icon.jpg
+├── resources
+│   └── FH.svg
+├── src
+│   ├── commands
+│   │   └── index.ts
+│   ├── extension.ts
+│   ├── logger
+│   │   └── Logger.ts
+│   ├── services
+│   │   ├── SyncManager.ts
+│   │   └── WorkspaceStateManager.ts
+│   ├── statusBar
+│   │   └── StatusBarManager.ts
+│   ├── test
+│   │   └── extension.test.ts
+│   ├── types
+│   │   ├── Message.ts
+│   │   └── WorkspaceState.ts
+│   ├── ui
+│   │   ├── FileHarmonyViewProvider.ts
+│   │   ├── log-viewer
+│   │   │   ├── log-viewer.css
+│   │   │   ├── log-viewer.html
+│   │   │   └── log-viewer.js
+│   │   ├── LogViewerPanelManager.ts
+│   │   ├── MessageHandler.ts
+│   │   └── pages
+│   │       ├── control-panel.css
+│   │       ├── control-panel.html
+│   │       └── control-panel.js
+│   └── utils.ts
+└── tsconfig.json
+
+23 directories, 67 files
+```
+
+
+this is CHANGELOG.md:
+```
+# Change Log
+
+All notable changes to this project will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
+and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [Unreleased]
+
+## [1.1.1] - 2024-11-30
+
+### Fixed
+- the readme image url is now fixed.
+
+
+## [1.1.0] - 2024-11-30
+
+### Added
+- completed the `README.md` file with a short explanation about the extension.
+
+### Changed
+- lowered the minimum supported vscode version to `1.54.0`.
+
+
+## [1.0.1] - 2024-11-29
+
+### Fixed
+- an error finding the initial webview html was fixed.
+
+
+## [1.0.0] - 2024-11-29
+
+### Added
+- v1.0 Initial mechanism and functionality implemented.
+
+### Changed
+- Clean up by breaking functionalities into different classes.
+- Choosing `chokidar` to handle syncing. I give up.
+- final cleanups
+
+### Fixed
+- Bug squashing for a good amount of time. This is what I get for trying to manually do things without using packages.
+
+
+
+```
+
+this is README.md:
+```
+# FileHarmony
+
+A simple vscode extension to keep two directories in sync.
+
+> NOTE: you need **vscode v1.54.0** minimum to install and use this extension.
+
+
+## How to Use
+
+Simply install the extension. A folder icon should appear on your primary activity bar:
+
+![File Harmony icon on activity bar](https://raw.githubusercontent.com/Amir-Zouerami/FileHarmony/refs/heads/main/README-resources/01-Activity-Bar-Icon.jpg)
+
+clicking on this icon (highlighted by the red circle) opens the control panel for File Harmony. There are 5 main elements in this panel:
+
+1. **Source Path**: The address (relative or absolute) to the directory where you would want to **copy files from**.
+2. **Target Path**: The address (relative or absolute) to the directory where you would want to **paste files to**.
+3. **Ignore List**: A list of comma separated directories or files names in the **source path** that need to be ignored.
+4. **Sync Status Toggle Switch**: Selects/shows the current sync status (syncing or not).
+5. **Save Button**: Saves the configuration.
+
+
+### Some Notes About This Plugin
+
+There are some gotchas/notes about this plugin that you need to know before using it:
+
+- The "ignore list" does not support patterns/wildcards, **only exact matches**. This is intentional as at my work place I needed things to be very explicit.
+- Sync status is workspace-bound. This means that if you turn syncing on, it **(all configuration) will persist** even after closing vscode. However, the syncing will only happen while vscode is up and running (duh!).
+- If you leave sync status "on" in a workspace and close vscode, launching vscode again will cause an **immediate directory sync**.
+- Syncing is unilateral, therefor changes in the target path do not trigger a sync operation. All such changes will be overwritten the moment a change occurs in the source path.
+- Clicking on the "Sync Status" toggle switch alone will not activate the extension. Do NOT forget to click save.
+- Using the [Command Palette](https://code.visualstudio.com/api/ux-guidelines/command-palette) in vscode and searching for "File Harmony" you can see two commands: one for toggling sync status on/off and another for showing the current sync status.
+
+
+## Pull Requests and Contribution?
+
+Most probably not. This is a purely utilitarian extension I developed for my work place. I do not care to actively maintain it.
+
+
+## License
+
+This extension is under MIT license.
+```
+
+this is eslint.config.mjs:
+```
+import typescriptEslint from "@typescript-eslint/eslint-plugin";
+import tsParser from "@typescript-eslint/parser";
+
+export default [{
+    files: ["**/*.ts"],
+}, {
+    plugins: {
+        "@typescript-eslint": typescriptEslint,
+    },
+
+    languageOptions: {
+        parser: tsParser,
+        ecmaVersion: 2022,
+        sourceType: "module",
+    },
+
+    rules: {
+        "@typescript-eslint/naming-convention": ["warn", {
+            selector: "import",
+            format: ["camelCase", "PascalCase"],
+        }],
+        eqeqeq: "warn",
+        "no-throw-literal": "warn",
+        semi: "warn",
+    },
+}];
+```
+
+this is export-project.js:
+```
+// export-project.js
+import fs from 'fs';
+import path from 'path';
+
+const outputFile = 'project_dump.txt'; // final big text file
+const rootDir = process.cwd(); // current directory where script runs
+
+// folders/files to skip
+const ignore = [
+	'node_modules',
+	'.git',
+	'dist',
+	'build',
+	'.vscode',
+	'out',
+	'README-resources',
+	'resources',
+	'coverage',
+    'LICENSE',
+    'package-lock.json',
+	outputFile,
+];
+
+// extensions we consider "text files"
+const textExtensions = [
+	'.js',
+	'.jsx',
+	'.ts',
+	'.tsx',
+	'.json',
+	'.html',
+	'.css',
+	'.scss',
+	'.md',
+	'.txt',
+	'.yml',
+	'.yaml',
+	'.cjs',
+	'.mjs',
+];
+
+function shouldIgnore(filePath) {
+	return ignore.some(name => filePath.includes(name));
+}
+
+function isTextFile(filePath) {
+	return textExtensions.includes(path.extname(filePath).toLowerCase());
+}
+
+async function collectFiles(dir) {
+	const entries = await fs.promises.readdir(dir, { withFileTypes: true });
+	let results = [];
+
+	for (const entry of entries) {
+		const fullPath = path.join(dir, entry.name);
+
+		if (shouldIgnore(fullPath)) continue;
+
+		if (entry.isDirectory()) {
+			results = results.concat(await collectFiles(fullPath));
+		} else if (isTextFile(fullPath)) {
+			results.push(fullPath);
+		}
+	}
+
+	return results;
+}
+
+async function exportProject() {
+	console.log(`📂 Scanning project at: ${rootDir}`);
+	const files = await collectFiles(rootDir);
+	let output = '';
+
+	for (const file of files) {
+		try {
+			const content = await fs.promises.readFile(file, 'utf8');
+			const relativePath = path.relative(rootDir, file);
+			output += `\nthis is ${relativePath}:\n\`\`\`\n${content}\n\`\`\`\n`;
+		} catch (err) {
+			console.warn(`⚠️ Skipping ${file} (could not read: ${err.message})`);
+		}
+	}
+
+	await fs.promises.writeFile(path.join(rootDir, outputFile), output, 'utf8');
+	console.log(`✅ Project exported to ${outputFile}`);
+}
+
+exportProject().catch(err => {
+	console.error('❌ Error exporting project:', err);
+});
+
+```
+
+this is package.json:
+```
+{
+	"name": "FileHarmony",
+	"displayName": "File Harmony",
+	"description": "A simple vscode extension to keep two directories in sync",
+	"publisher": "zouerami",
+	"author": {
+		"name": "Amir Zouerami",
+		"url": "https://github.com/Amir-Zouerami"
+	},
+	"version": "1.1.0",
+	"engines": {
+		"vscode": "^1.54.0"
+	},
+	"categories": [
+		"Other"
+	],
+	"activationEvents": [
+		"onStartupFinished"
+	],
+	"main": "./out/extension.js",
+	"icon": "icon.png",
+	"repository": {
+		"type": "git",
+		"url": "git@github.com:Amir-Zouerami/FileHarmony.git"
+	},
+	"bugs": {
+		"url": "https://github.com/Amir-Zouerami/FileHarmony/issues"
+	},
+	"contributes": {
+		"commands": [
+			{
+				"command": "fileHarmony.toggleSyncStatus",
+				"title": "FileHarmony (FH): Toggle Sync Watcher"
+			},
+			{
+				"command": "fileHarmony.getWatchStatus",
+				"title": "FileHarmony (FH): Show Current Watch Status"
+			}
+		],
+		"viewsContainers": {
+			"activitybar": [
+				{
+					"id": "fileHarmonyViewContainer",
+					"title": "File Harmony",
+					"icon": "resources/FH.svg"
+				}
+			]
+		},
+		"views": {
+			"fileHarmonyViewContainer": [
+				{
+					"type": "webview",
+					"id": "fileHarmonyView",
+					"name": "Control Panel"
+				}
+			]
+		}
+	},
+	"scripts": {
+		"vscode:prepublish": "npm run compile",
+		"compile": "tsc -p ./",
+		"watch": "tsc -watch -p ./",
+		"pretest": "npm run compile && npm run lint",
+		"lint": "eslint src",
+		"test": "vscode-test"
+	},
+	"devDependencies": {
+		"@types/micromatch": "^4.0.9",
+		"@types/mocha": "^10.0.9",
+		"@types/node": "20.x",
+		"@types/vscode": "^1.54.0",
+		"@typescript-eslint/eslint-plugin": "^8.10.0",
+		"@typescript-eslint/parser": "^8.7.0",
+		"@vscode/test-cli": "^0.0.10",
+		"@vscode/test-electron": "^2.4.1",
+		"eslint": "^9.13.0",
+		"typescript": "^5.6.3"
+	},
+	"dependencies": {
+		"chokidar": "^4.0.1",
+		"micromatch": "^4.0.8"
+	}
+}
+
+```
+
+this is src/commands/index.ts:
+```
+
+```
+
+this is src/extension.ts:
+```
+import WorkspaceStateManager from './services/WorkspaceStateManager';
+import FileHarmonyViewProvider from './ui/FileHarmonyViewProvider';
+import { StatusBarManager } from './statusBar/StatusBarManager';
+import MessageHandler from './ui/MessageHandler';
+import SyncManager from './services/SyncManager';
+import { Logger } from './logger/Logger';
+import { LogViewerPanelManager } from './ui/LogViewerPanelManager';
+import * as vscode from 'vscode';
+
+export async function activate(context: vscode.ExtensionContext) {
+	const logger = new Logger('File Harmony');
+	const statusBarManager = new StatusBarManager();
+	const stateManager = new WorkspaceStateManager(context);
+	const syncManager = new SyncManager(stateManager, logger);
+	const messageHandler = new MessageHandler(stateManager, syncManager, logger);
+
+	// --- Wire up the Logger to the new LogViewerPanelManager ---
+	logger.setUiLogCallback(logMessage => {
+		const match = logMessage.match(/\[(INFO|WARN|ERROR)/);
+		const level = (match ? match[1] : 'INFO') as 'INFO' | 'WARN' | 'ERROR';
+		LogViewerPanelManager.postMessage({ command: 'log', level, message: logMessage });
+	});
+
+	const provider = new FileHarmonyViewProvider(context, messageHandler, stateManager);
+	context.subscriptions.push(vscode.window.registerWebviewViewProvider('fileHarmonyView', provider));
+
+	// --- Initial Status on Activation ---
+	const { syncStatus } = stateManager.getState();
+	statusBarManager.update(syncStatus ? 'active' : 'inactive');
+
+	if (syncStatus) {
+		try {
+			statusBarManager.update('syncing');
+			await syncManager.initialDirectorySync();
+			await syncManager.addSyncWatcher();
+			statusBarManager.update('active');
+		} catch (err) {
+			logger.showError('Failed during startup sync.', err);
+			statusBarManager.update('error', 'Startup sync failed.');
+		}
+	}
+
+	// --- COMMAND REGISTRATION ---
+	context.subscriptions.push(
+		vscode.commands.registerCommand('fileHarmony.showLogViewer', () => {
+			LogViewerPanelManager.createOrShow(context.extensionUri);
+		}),
+
+		vscode.commands.registerCommand('fileHarmony.toggleSyncStatus', async () => {
+			const newSyncStatus = await syncManager.toggleSyncStatus();
+			stateManager.updateState({ syncStatus: newSyncStatus });
+			provider.updateWebview();
+			logger.showInfo(`Sync Watcher ${newSyncStatus ? 'Activated' : 'Deactivated'}.`);
+			statusBarManager.update(newSyncStatus ? 'active' : 'inactive');
+		}),
+
+		vscode.commands.registerCommand('fileHarmony.getWatchStatus', () => {
+			const currStatus = syncManager.getCurrWatchStatus();
+			logger.showInfo(`Watch Status is currently: ${currStatus ? 'Active' : 'Inactive'}.`);
+		}),
+
+		vscode.commands.registerCommand('fileHarmony.syncNowWithFeedback', async () => {
+			statusBarManager.update('syncing');
+			try {
+				await syncManager.initialDirectorySync();
+				const newState = stateManager.getState();
+				provider.updateWebviewWithState(newState);
+			} catch (err) {
+				logger.error('Manual sync failed.', err);
+			} finally {
+				const currentSyncStatus = syncManager.getCurrWatchStatus();
+				statusBarManager.update(currentSyncStatus ? 'active' : 'inactive');
+			}
+		}),
+	);
+
+	context.subscriptions.push(logger, statusBarManager, syncManager, provider);
+}
+
+export function deactivate() {
+	LogViewerPanelManager.dispose();
+}
+
+```
+
+this is src/logger/Logger.ts:
+```
+import * as vscode from 'vscode';
+
+export class Logger {
+	private readonly _outputChannel: vscode.OutputChannel;
+	private _uiLogCallback: ((message: string) => void) | undefined;
+
+	constructor(channelName: string) {
+		this._outputChannel = vscode.window.createOutputChannel(channelName);
+	}
+
+	public setUiLogCallback(callback: (message: string) => void) {
+		this._uiLogCallback = callback;
+	}
+
+	private log(level: 'INFO' | 'WARN' | 'ERROR', message: string) {
+		const timestamp = new Date().toLocaleTimeString();
+		const logMessage = `[${level} - ${timestamp}] ${message}`;
+		this._outputChannel.appendLine(logMessage);
+
+		if (this._uiLogCallback) {
+			this._uiLogCallback(logMessage);
+		}
+	}
+
+	public info(message: string) {
+		this.log('INFO', message);
+	}
+
+	public warn(message: string) {
+		this.log('WARN', message);
+	}
+
+	public error(message: string, error?: unknown) {
+		let errorMessage = message;
+		if (error) {
+			const errorDetails = error instanceof Error ? error.stack || error.message : JSON.stringify(error);
+			errorMessage += `\nDetails: ${errorDetails}`;
+		}
+		this.log('ERROR', errorMessage);
+	}
+
+	public showInfo(message: string) {
+		this.info(message);
+		vscode.window.showInformationMessage(`File Harmony: ${message}`);
+	}
+
+	public showWarning(message: string) {
+		this.warn(message);
+		vscode.window.showWarningMessage(`File Harmony: ${message}`);
+	}
+
+	public showError(message: string, error?: unknown) {
+		this.error(message, error);
+		vscode.window.showErrorMessage(`File Harmony: ${message}`);
+	}
+
+	public dispose() {
+		this._outputChannel.dispose();
+	}
+}
+
+```
+
+this is src/services/SyncManager.ts:
+```
+import type WorkspaceStateManager from './WorkspaceStateManager';
+import chokidar, { type FSWatcher } from 'chokidar';
+import type { Logger } from '../logger/Logger';
+import micromatch from 'micromatch';
+import * as path from 'node:path';
+import * as vscode from 'vscode';
+import * as fs from 'node:fs';
+
+class SyncManager {
+	private watcher?: FSWatcher;
+	private stateManager: WorkspaceStateManager;
+	private logger: Logger;
+
+	constructor(stateManager: WorkspaceStateManager, logger: Logger) {
+		this.stateManager = stateManager;
+		this.logger = logger;
+	}
+
+	private _updateLastSyncedTimestamp() {
+		const newTimestamp = new Date().toISOString();
+		this.stateManager.updateState({ lastSynced: newTimestamp });
+	}
+
+	async initialDirectorySync() {
+		const { sourcePath, targetPath, ignoreList, syncStatus, syncMode } = this.stateManager.getState();
+
+		const check = this.checkSourceAndTarget(sourcePath, targetPath, syncStatus);
+		if (!check) return false;
+
+		const { resolvedSourcePath, resolvedTargetPath } = this.convertToAbsolutePath(sourcePath, targetPath);
+		this.logger.info(
+			`Starting initial directory sync (Mode: ${syncMode}) from "${resolvedSourcePath}" to "${resolvedTargetPath}".`,
+		);
+
+		await this.recursiveSync(resolvedSourcePath, resolvedTargetPath, ignoreList, resolvedSourcePath, syncMode);
+		this.logger.info('Initial directory sync completed.');
+		this._updateLastSyncedTimestamp();
+	}
+
+	private async recursiveSync(
+		currentSource: string,
+		currentTarget: string,
+		ignoreList: string[],
+		rootSource: string,
+		syncMode: 'smart' | 'force',
+	) {
+		const entries = await fs.promises.readdir(currentSource, { withFileTypes: true });
+
+		for (const entry of entries) {
+			const sourceEntryPath = path.join(currentSource, entry.name);
+			const relativePath = path.relative(rootSource, sourceEntryPath);
+
+			if (this.isIgnored(relativePath, ignoreList)) {
+				continue;
+			}
+
+			const targetEntryPath = path.join(currentTarget, entry.name);
+
+			if (entry.isDirectory()) {
+				await fs.promises.mkdir(targetEntryPath, { recursive: true });
+				await this.recursiveSync(sourceEntryPath, targetEntryPath, ignoreList, rootSource, syncMode);
+			} else if (entry.isFile()) {
+				await fs.promises.mkdir(path.dirname(targetEntryPath), { recursive: true });
+
+				try {
+					let shouldCopy = false;
+					if (syncMode === 'force') {
+						shouldCopy = true;
+					} else {
+						const targetExists = fs.existsSync(targetEntryPath);
+
+						if (
+							!targetExists ||
+							(await fs.promises.stat(sourceEntryPath)).mtimeMs >
+								(await fs.promises.stat(targetEntryPath)).mtimeMs
+						) {
+							shouldCopy = true;
+						}
+					}
+
+					if (shouldCopy) {
+						await fs.promises.copyFile(sourceEntryPath, targetEntryPath);
+						this.logger.info(`Synced file: ${relativePath}`);
+					}
+				} catch (err) {
+					this.logger.error(`Failed to sync file: ${relativePath}`, err);
+				}
+			}
+		}
+	}
+
+	async addSyncWatcher(isToggleCommand = false) {
+		if (this.watcher) await this.dispose();
+		const { sourcePath, targetPath, ignoreList, syncStatus } = this.stateManager.getState();
+
+		const check = this.checkSourceAndTarget(sourcePath, targetPath, syncStatus, isToggleCommand);
+		if (!check) return false;
+
+		const { resolvedSourcePath, resolvedTargetPath } = this.convertToAbsolutePath(sourcePath, targetPath);
+		this.logger.info(`Adding sync watcher to: ${resolvedSourcePath}`);
+
+		this.watcher = chokidar.watch(resolvedSourcePath, {
+			// chokidar natively supports glob patterns, so we just pass them in
+			ignored: ignoreList,
+			persistent: true,
+			ignoreInitial: true,
+			awaitWriteFinish: { stabilityThreshold: 100, pollInterval: 10 },
+		});
+
+		this.watcher
+			.on('add', filePath => this.syncFile(filePath, resolvedSourcePath, resolvedTargetPath))
+			.on('change', filePath => this.syncFile(filePath, resolvedSourcePath, resolvedTargetPath))
+			.on('unlink', filePath => this.deleteFile(filePath, resolvedSourcePath, resolvedTargetPath))
+			.on('addDir', dirPath => this.syncDirectory(dirPath, resolvedSourcePath, resolvedTargetPath))
+			.on('unlinkDir', dirPath => this.deleteDirectory(dirPath, resolvedSourcePath, resolvedTargetPath))
+			.on('error', error => this.logger.error('Watcher error:', error));
+
+		return true;
+	}
+
+	private syncFile(filePath: string, resolvedSourcePath: string, resolvedTargetPath: string) {
+		const { ignoreList, syncMode } = this.stateManager.getState();
+		const relativePath = path.relative(resolvedSourcePath, filePath);
+
+		// The watcher already filters based on the ignore list, but this is a good safeguard
+		if (this.isIgnored(relativePath, ignoreList)) return;
+
+		const targetFile = path.join(resolvedTargetPath, relativePath);
+
+		const performCopy = () => {
+			fs.copyFile(filePath, targetFile, err => {
+				if (err) this.logger.error(`Error syncing file ${relativePath}:`, err);
+				else this.logger.info(`Synced file: ${relativePath}`);
+				this._updateLastSyncedTimestamp();
+			});
+		};
+
+		fs.mkdir(path.dirname(targetFile), { recursive: true }, err => {
+			if (err) return this.logger.error(`Error creating directory for ${relativePath}:`, err);
+
+			if (syncMode === 'force') {
+				performCopy();
+			} else {
+				fs.stat(targetFile, (err, targetStats) => {
+					if (err || fs.statSync(filePath).mtimeMs > targetStats.mtimeMs) {
+						performCopy();
+					}
+				});
+			}
+		});
+	}
+
+	private deleteFile(filePath: string, resolvedSourcePath: string, resolvedTargetPath: string) {
+		const relativePath = path.relative(resolvedSourcePath, filePath);
+		const targetFile = path.join(resolvedTargetPath, relativePath);
+
+		if (fs.existsSync(targetFile)) {
+			fs.unlink(targetFile, err => {
+				if (err) {
+					this.logger.error(`Error deleting file ${relativePath}:`, err);
+				} else {
+					this.logger.info(`Deleted file: ${relativePath}`);
+					this._updateLastSyncedTimestamp();
+				}
+			});
+		}
+	}
+
+	private syncDirectory(dirPath: string, resolvedSourcePath: string, resolvedTargetPath: string) {
+		const relativePath = path.relative(resolvedSourcePath, dirPath);
+		const targetDir = path.join(resolvedTargetPath, relativePath);
+
+		fs.mkdir(targetDir, { recursive: true }, err => {
+			if (err) this.logger.error(`Error creating directory ${relativePath}:`, err);
+			else this.logger.info(`Synced directory: ${relativePath}`);
+		});
+	}
+
+	private deleteDirectory(dirPath: string, resolvedSourcePath: string, resolvedTargetPath: string) {
+		const relativePath = path.relative(resolvedSourcePath, dirPath);
+		const targetDir = path.join(resolvedTargetPath, relativePath);
+
+		if (fs.existsSync(targetDir)) {
+			fs.rm(targetDir, { recursive: true, force: true }, err => {
+				if (err) this.logger.error(`Error deleting directory ${relativePath}:`, err);
+				else this.logger.info(`Deleted directory: ${relativePath}`);
+			});
+		}
+	}
+
+	async toggleSyncStatus() {
+		if (this.watcher) {
+			await this.dispose();
+			return false;
+		}
+		return await this.addSyncWatcher(true);
+	}
+
+	getCurrWatchStatus() {
+		return !!this.watcher;
+	}
+
+	async dispose() {
+		if (this.watcher) {
+			await this.watcher.close();
+			this.watcher = undefined;
+			this.logger.info('Sync watcher stopped.');
+		}
+	}
+
+	private isIgnored(filePath: string, ignoreList: string[]) {
+		const normalizedPath = filePath.replace(/\\/g, '/');
+		return micromatch.isMatch(normalizedPath, ignoreList);
+	}
+
+	private convertToAbsolutePath(sourcePath: string, targetPath: string) {
+		const workspaceFolder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || '';
+		return {
+			resolvedSourcePath: path.isAbsolute(sourcePath) ? sourcePath : path.resolve(workspaceFolder, sourcePath),
+			resolvedTargetPath: path.isAbsolute(targetPath) ? targetPath : path.resolve(workspaceFolder, targetPath),
+		};
+	}
+
+	private checkSourceAndTarget(sourcePath: string, targetPath: string, syncStatus: boolean, isToggleCommand = false) {
+		if (!sourcePath || !targetPath) {
+			if (syncStatus || isToggleCommand)
+				this.logger.showError('Source or Target Path cannot be empty! Sync watcher failed to start.');
+			return false;
+		}
+
+		if (sourcePath === targetPath) {
+			this.logger.showError('Source and Target Path cannot be the same.');
+			return false;
+		}
+
+		const { resolvedSourcePath } = this.convertToAbsolutePath(sourcePath, targetPath);
+		if (!fs.existsSync(resolvedSourcePath)) {
+			if (syncStatus || isToggleCommand)
+				this.logger.showError(`Source directory does not exist: ${resolvedSourcePath}`);
+			return false;
+		}
+
+		return true;
+	}
+}
+
+export default SyncManager;
+
+```
+
+this is src/services/WorkspaceStateManager.ts:
+```
+import type * as vscode from 'vscode';
+import type { WorkspaceState } from '../types/WorkspaceState';
+
+class WorkspaceStateManager {
+	private defaultState: WorkspaceState;
+	private stateKeyName = 'FILE_HARMONY';
+	private context: vscode.ExtensionContext;
+
+	constructor(context: vscode.ExtensionContext) {
+		this.context = context;
+		this.defaultState = {
+			sourcePath: '',
+			targetPath: '',
+			ignoreList: ['node_modules', '.vscode', '.idea', '.git', 'dist'],
+			syncStatus: false,
+			syncMode: 'smart',
+			lastSynced: null,
+		};
+	}
+
+	getState() {
+		const currState: WorkspaceState = this.context.workspaceState.get(this.stateKeyName, this.defaultState);
+
+		// backwards compatibility for older versions
+		if (!currState.syncMode) {
+			currState.syncMode = this.defaultState.syncMode;
+		}
+
+		if (currState.lastSynced === undefined) {
+			currState.lastSynced = this.defaultState.lastSynced;
+		}
+
+		return currState;
+	}
+
+	updateState(newState: Partial<WorkspaceState>) {
+		const nextState = { ...this.getState(), ...newState };
+		nextState.ignoreList = nextState.ignoreList.map(item => item.trim()).filter(Boolean);
+
+		this.context.workspaceState.update(this.stateKeyName, nextState);
+	}
+}
+
+export default WorkspaceStateManager;
+
+```
+
+this is src/statusBar/StatusBarManager.ts:
+```
+import * as vscode from 'vscode';
+
+export type SyncStatus = 'active' | 'inactive' | 'syncing' | 'error';
+
+export class StatusBarManager {
+	private readonly _statusBarItem: vscode.StatusBarItem;
+
+	constructor() {
+		this._statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
+		this.update('inactive'); // initial state
+		this._statusBarItem.show();
+	}
+
+	public update(status: SyncStatus, details?: string) {
+		switch (status) {
+			case 'active':
+				this._statusBarItem.text = '$(check) File Harmony';
+				this._statusBarItem.tooltip = 'Sync is active and watching for changes.';
+				this._statusBarItem.command = 'fileHarmony.toggleSyncStatus';
+				break;
+			case 'inactive':
+				this._statusBarItem.text = '$(circle-slash) File Harmony';
+				this._statusBarItem.tooltip = 'Sync is inactive. Click to toggle.';
+				this._statusBarItem.command = 'fileHarmony.toggleSyncStatus';
+				break;
+			case 'syncing':
+				this._statusBarItem.text = '$(sync~spin) File Harmony';
+				this._statusBarItem.tooltip = 'Sync in progress...';
+				this._statusBarItem.command = undefined; // Not clickable during sync
+				break;
+			case 'error':
+				this._statusBarItem.text = '$(error) File Harmony';
+				this._statusBarItem.tooltip = `An error occurred. ${
+					details ? `Details: ${details}` : 'Check the output log.'
+				}`;
+				this._statusBarItem.command = 'fileHarmony.getWatchStatus';
+				break;
+		}
+	}
+
+	public dispose() {
+		this._statusBarItem.dispose();
+	}
+}
+
+```
+
+this is src/test/extension.test.ts:
+```
+import * as assert from 'assert';
+import * as vscode from 'vscode';
+
+suite('Extension Test Suite', () => {
+	vscode.window.showInformationMessage('Start all tests.');
+
+	test('Sample test', () => {
+		assert.strictEqual(-1, [1, 2, 3].indexOf(5));
+		assert.strictEqual(-1, [1, 2, 3].indexOf(0));
+	});
+});
+
+```
+
+this is src/types/Message.ts:
+```
+import type { WorkspaceState } from './WorkspaceState';
+
+export interface UpdateStateMessage {
+	command: 'UPDATE_STATE';
+	value: WorkspaceState;
+}
+
+export interface GetStateMessage {
+	command: 'GET_STATE';
+}
+
+export interface SelectFolderMessage {
+	command: 'SELECT_FOLDER';
+	payload: {
+		for: 'source' | 'target';
+	};
+}
+
+export interface SyncNowMessage {
+	command: 'SYNC_NOW';
+}
+
+export interface LogUpdatedMessage {
+	command: 'LOG_UPDATED';
+	payload: string;
+}
+
+export interface ShowLogViewerMessage {
+	command: 'SHOW_LOG_VIEWER';
+}
+
+export type Message =
+	| UpdateStateMessage
+	| GetStateMessage
+	| SelectFolderMessage
+	| SyncNowMessage
+	| ShowLogViewerMessage;
+
+```
+
+this is src/types/WorkspaceState.ts:
+```
+export interface WorkspaceState {
+	sourcePath: string;
+	targetPath: string;
+	syncStatus: boolean;
+	ignoreList: string[];
+	syncMode: 'smart' | 'force';
+	lastSynced: string | null;
+}
+
+```
+
+this is src/ui/FileHarmonyViewProvider.ts:
+```
+import type WorkspaceStateManager from '../services/WorkspaceStateManager';
+import type { WorkspaceState } from '../types/WorkspaceState';
+import type MessageHandler from './MessageHandler';
+import type { Message } from '../types/Message';
+import * as vscode from 'vscode';
+import fs from 'node:fs';
+
+class FileHarmonyViewProvider implements vscode.WebviewViewProvider {
+	private disposables: vscode.Disposable[] = [];
+	private stateManager: WorkspaceStateManager;
+	private messageHandler: MessageHandler;
+	private _view?: vscode.WebviewView;
+	private readonly extensionUri: vscode.Uri;
+
+	constructor(context: vscode.ExtensionContext, messageHandler: MessageHandler, stateManager: WorkspaceStateManager) {
+		this.stateManager = stateManager;
+		this.messageHandler = messageHandler;
+		this.extensionUri = context.extensionUri;
+	}
+
+	resolveWebviewView(webviewView: vscode.WebviewView) {
+		this._view = webviewView;
+		webviewView.webview.options = {
+			enableScripts: true,
+			localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'src', 'ui')],
+		};
+
+		webviewView.webview.html = this.getHtmlForWebview(webviewView.webview);
+		this.updateWebview();
+
+		this.disposables.push(
+			webviewView.webview.onDidReceiveMessage(async (message: Message) => {
+				await this.messageHandler.invokeMatchingMessageHandler(message, this._view);
+			}),
+		);
+	}
+
+	public postLogToWebview(logMessage: string) {
+		if (this._view) {
+			this._view.webview.postMessage({
+				command: 'LOG_UPDATED',
+				payload: logMessage,
+			});
+		}
+	}
+
+	public updateWebviewWithState(state: WorkspaceState) {
+		if (this._view) {
+			this.messageHandler.notifyWebViewToUpdate(state, this._view);
+		}
+	}
+
+	updateWebview() {
+		if (this._view) {
+			const currState = this.stateManager.getState();
+			this.messageHandler.notifyWebViewToUpdate(currState, this._view);
+		}
+	}
+
+	private getHtmlForWebview(webview: vscode.Webview): string {
+		const pagesPath = vscode.Uri.joinPath(this.extensionUri, 'src', 'ui', 'pages');
+
+		const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(pagesPath, 'control-panel.css'));
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(pagesPath, 'control-panel.js'));
+
+		const htmlPath = vscode.Uri.joinPath(pagesPath, 'control-panel.html');
+		const htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf-8');
+
+		return htmlContent
+			.replace(/#{stylesUri}/g, stylesUri.toString())
+			.replace(/#{scriptUri}/g, scriptUri.toString())
+			.replace(/#{cspSource}/g, webview.cspSource);
+	}
+
+	dispose() {
+		for (const disposable of this.disposables) {
+			disposable.dispose();
+		}
+		this.disposables = [];
+		this._view = undefined;
+	}
+}
+
+export default FileHarmonyViewProvider;
+
+```
+
+this is src/ui/LogViewerPanelManager.ts:
+```
+import * as vscode from 'vscode';
+import fs from 'node:fs';
+
+interface LogMessage {
+	command: 'log';
+	level: 'INFO' | 'WARN' | 'ERROR';
+	message: string;
+}
+
+export class LogViewerPanelManager {
+	private static _instance: LogViewerPanelManager | undefined;
+	private readonly _panel: vscode.WebviewPanel;
+	private readonly _extensionUri: vscode.Uri;
+	private _disposables: vscode.Disposable[] = [];
+
+	private constructor(extensionUri: vscode.Uri) {
+		this._extensionUri = extensionUri;
+		const column = vscode.window.activeTextEditor ? vscode.window.activeTextEditor.viewColumn : undefined;
+
+		this._panel = vscode.window.createWebviewPanel(
+			'fileHarmonyLog',
+			'File Harmony Log',
+			column || vscode.ViewColumn.One,
+			{
+				enableScripts: true,
+				localResourceRoots: [vscode.Uri.joinPath(this._extensionUri, 'src', 'ui', 'log-viewer')],
+			},
+		);
+
+		this._panel.webview.html = this._getHtmlForWebview(this._panel.webview);
+		this._panel.iconPath = vscode.Uri.joinPath(this._extensionUri, 'resources', 'FH.svg');
+		this._panel.onDidDispose(() => this.dispose(), null, this._disposables);
+	}
+
+	public static createOrShow(extensionUri: vscode.Uri) {
+		if (LogViewerPanelManager._instance) {
+			LogViewerPanelManager._instance._panel.reveal(vscode.window.activeTextEditor?.viewColumn);
+		} else {
+			LogViewerPanelManager._instance = new LogViewerPanelManager(extensionUri);
+		}
+	}
+
+	public static postMessage(message: LogMessage) {
+		LogViewerPanelManager._instance?._panel.webview.postMessage(message);
+	}
+
+	public static dispose() {
+		LogViewerPanelManager._instance?.dispose();
+	}
+
+	private dispose() {
+		LogViewerPanelManager._instance = undefined;
+		this._panel.dispose();
+
+		while (this._disposables.length) {
+			const x = this._disposables.pop();
+
+			if (x) {
+				x.dispose();
+			}
+		}
+	}
+
+	private _getHtmlForWebview(webview: vscode.Webview): string {
+		const viewerPath = vscode.Uri.joinPath(this._extensionUri, 'src', 'ui', 'log-viewer');
+		const stylesUri = webview.asWebviewUri(vscode.Uri.joinPath(viewerPath, 'log-viewer.css'));
+		const scriptUri = webview.asWebviewUri(vscode.Uri.joinPath(viewerPath, 'log-viewer.js'));
+		const htmlPath = vscode.Uri.joinPath(viewerPath, 'log-viewer.html');
+
+		let htmlContent = fs.readFileSync(htmlPath.fsPath, 'utf-8');
+
+		htmlContent = htmlContent
+			.replace(/#{stylesUri}/g, stylesUri.toString())
+			.replace(/#{scriptUri}/g, scriptUri.toString())
+			.replace(/#{cspSource}/g, webview.cspSource);
+
+		return htmlContent;
+	}
+}
+
+```
+
+this is src/ui/MessageHandler.ts:
+```
+import type { Message, SelectFolderMessage, UpdateStateMessage } from '../types/Message';
+import type WorkspaceStateManager from '../services/WorkspaceStateManager';
+import type { WorkspaceState } from '../types/WorkspaceState';
+import type SyncManager from '../services/SyncManager';
+import type { Logger } from '../logger/Logger';
+import * as vscode from 'vscode';
+import fs from 'node:fs';
+
+class MessageHandler {
+	private stateManager: WorkspaceStateManager;
+	private syncManager: SyncManager;
+	private logger: Logger;
+
+	constructor(stateManager: WorkspaceStateManager, syncManager: SyncManager, logger: Logger) {
+		this.stateManager = stateManager;
+		this.syncManager = syncManager;
+		this.logger = logger;
+	}
+
+	async invokeMatchingMessageHandler(message: Message, view: vscode.WebviewView | undefined) {
+		switch (message.command) {
+			case 'GET_STATE': {
+				const newState = this.getStateMessageHander();
+				this.notifyWebViewToUpdate(newState, view);
+				break;
+			}
+			case 'UPDATE_STATE': {
+				if (!this.stopOnEmptySourceOrTarget(message)) return;
+
+				this.updateStateMessageHandler(message);
+				await this.updateWatchers(message.value.syncStatus);
+
+				this.logger.showInfo('Configuration Updated!');
+				break;
+			}
+			case 'SELECT_FOLDER': {
+				await this.selectFolderMessageHandler(message, view);
+				break;
+			}
+			case 'SYNC_NOW': {
+				this.logger.info('Manual sync requested by user.');
+				// We execute a command to show the status bar, keeping this class clean.
+				vscode.commands.executeCommand('fileHarmony.syncNowWithFeedback');
+				break;
+			}
+			case 'SHOW_LOG_VIEWER': {
+				vscode.commands.executeCommand('fileHarmony.showLogViewer');
+				break;
+			}
+		}
+	}
+
+	notifyWebViewToUpdate(newState: WorkspaceState, view: vscode.WebviewView | undefined) {
+		view?.webview.postMessage({ command: 'UPDATE_WEBVIEW', value: newState });
+	}
+
+	private async selectFolderMessageHandler(message: SelectFolderMessage, view: vscode.WebviewView | undefined) {
+		const options: vscode.OpenDialogOptions = {
+			canSelectFolders: true,
+			canSelectFiles: false,
+			canSelectMany: false,
+			openLabel: 'Select Folder',
+		};
+
+		const result = await vscode.window.showOpenDialog(options);
+		if (result && result.length > 0) {
+			const selectedPath = result[0].fsPath;
+
+			view?.webview.postMessage({
+				command: 'FOLDER_SELECTED',
+				payload: {
+					for: message.payload.for,
+					path: selectedPath,
+				},
+			});
+		}
+	}
+
+	private updateStateMessageHandler(message: UpdateStateMessage) {
+		this.stateManager.updateState(message.value);
+	}
+
+	private getStateMessageHander() {
+		return this.stateManager.getState();
+	}
+
+	private stopOnEmptySourceOrTarget(message: UpdateStateMessage): boolean {
+		if (message.value.syncStatus) {
+			if (!message.value.sourcePath || !message.value.targetPath) {
+				this.logger.showError('Source Path or Target Path cannot be empty! Saving config failed!');
+				return false;
+			}
+
+			if (message.value.sourcePath === message.value.targetPath) {
+				this.logger.showError('Source Path and Target Path cannot be equal!');
+				return false;
+			}
+
+			if (!fs.existsSync(message.value.sourcePath)) {
+				this.logger.showError('Source directory does not exist! Saving config failed!');
+				return false;
+			}
+		}
+
+		return true;
+	}
+
+	private async updateWatchers(syncStatus: boolean) {
+		if (syncStatus) {
+			await this.syncManager.addSyncWatcher();
+		} else {
+			await this.syncManager.dispose();
+		}
+	}
+}
+
+export default MessageHandler;
+
+```
+
+this is src/ui/log-viewer/log-viewer.css:
+```
+body {
+    background-color: var(--vscode-editor-background, #1f2428);
+    color: var(--vscode-editor-foreground, #d4d4d4);
+    font-family: 'Menlo', 'Consolas', 'Courier New', monospace;
+    font-size: 14px;
+    padding: 0;
+    /* Remove body padding */
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* --- NEW HEADER STYLES --- */
+.log-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px 20px;
+    border-bottom: 1px solid var(--vscode-editorWidget-border, #454545);
+    flex-shrink: 0;
+    margin-bottom: 15px;
+}
+
+.log-header h2 {
+    margin: 0;
+    font-size: 1.2em;
+}
+
+.clear-log-button {
+    background-color: var(--vscode-button-secondaryBackground);
+    color: var(--vscode-button-secondaryForeground);
+    border: 1px solid var(--vscode-button-border);
+    padding: 5px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+.clear-log-button:hover {
+    background-color: var(--vscode-button-secondaryHoverBackground);
+}
+
+#log-container {
+    flex-grow: 1;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    overflow-y: auto;
+    padding: 10px 20px;
+}
+
+.log-entry {
+    display: flex;
+    align-items: flex-start;
+    padding: 2px 0;
+    border-bottom: 1px solid var(--vscode-input-border, #454545);
+}
+
+.log-timestamp {
+    flex-shrink: 0;
+    width: 100px;
+    color: var(--vscode-descriptionForeground, #888);
+}
+
+.log-level {
+    flex-shrink: 0;
+    width: 70px;
+    font-weight: bold;
+    text-align: left;
+}
+
+.log-level.INFO {
+    color: #3794ff;
+}
+
+.log-level.WARN {
+    color: #f5d76e;
+}
+
+.log-level.ERROR {
+    color: #e74c3c;
+}
+
+.log-message {
+    flex-grow: 1;
+}
+```
+
+this is src/ui/log-viewer/log-viewer.html:
+```
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="default-src 'none'; style-src #{cspSource}; script-src #{cspSource};"
+		/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link href="#{stylesUri}" rel="stylesheet" />
+		<title>File Harmony Log</title>
+	</head>
+	<body>
+		<div class="log-header">
+			<h2>Activity Log</h2>
+			<button id="clearLogButton" class="clear-log-button">Clear Logs</button>
+		</div>
+
+		<div id="log-container"></div>
+
+		<script src="#{scriptUri}"></script>
+	</body>
+</html>
+
+```
+
+this is src/ui/log-viewer/log-viewer.js:
+```
+document.addEventListener('DOMContentLoaded', () => {
+	const logContainer = document.getElementById('log-container');
+	const clearLogButton = document.getElementById('clearLogButton');
+
+	clearLogButton.addEventListener('click', () => {
+		logContainer.innerHTML = '';
+	});
+
+	window.addEventListener('message', event => {
+		const message = event.data;
+
+		if (message.command === 'log') {
+			const logEntry = document.createElement('div');
+			logEntry.className = 'log-entry';
+
+			const timestampSpan = document.createElement('span');
+			timestampSpan.className = 'log-timestamp';
+			timestampSpan.textContent = new Date().toLocaleTimeString();
+
+			const levelSpan = document.createElement('span');
+			levelSpan.className = `log-level ${message.level}`;
+			levelSpan.textContent = `[${message.level}]`;
+
+			const messageSpan = document.createElement('span');
+			messageSpan.className = 'log-message';
+			const cleanMessage = message.message.substring(message.message.indexOf(']') + 2);
+			messageSpan.textContent = cleanMessage;
+
+			logEntry.appendChild(timestampSpan);
+			logEntry.appendChild(levelSpan);
+			logEntry.appendChild(messageSpan);
+			logContainer.appendChild(logEntry);
+
+			// Auto-scroll to the bottom
+			logContainer.scrollTop = logContainer.scrollHeight;
+		}
+	});
+});
+
+```
+
+this is src/ui/pages/control-panel.css:
+```
+body {
+    font-family: 'Roboto', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-size: cover;
+    color: #f5f5f5;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    border-radius: 10px;
+    width: 90%;
+    max-width: 450px;
+    padding: 20px;
+    box-sizing: border-box;
+}
+
+h1 {
+    font-size: 2rem;
+    text-align: center;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    margin-bottom: 1.2rem;
+}
+
+label {
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+    font-size: 1rem;
+    display: flex;
+    align-items: center;
+}
+
+input[type='text'] {
+    padding: 0.8rem;
+    border: none;
+    border-radius: 7px;
+    font-size: 0.9rem;
+    background: rgba(30, 30, 30, 0.9);
+    color: #f5f5f5;
+    outline: none;
+    transition: box-shadow 0.3s ease;
+    flex-grow: 1;
+}
+
+input[type='text']:focus {
+    box-shadow: 0 0 10px #404c8d;
+}
+
+.input-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* --- NEW STYLE FOR THE ADD BUTTON --- */
+.add-button {
+    flex-shrink: 0;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 7px;
+    background-color: #3a6073;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 1.5rem;
+    line-height: 1;
+    transition: background-color 0.3s ease;
+}
+
+.add-button:hover {
+    background-color: #4a7a91;
+}
+
+/* --- END NEW STYLE --- */
+
+.browse-button {
+    padding: 0.8rem 1rem;
+    border: none;
+    border-radius: 7px;
+    background-color: #3a6073;
+    color: white;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color 0.3s ease;
+}
+
+.browse-button:hover {
+    background-color: #4a7a91;
+}
+
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 52px;
+    height: 28px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: 0.4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: '';
+    height: 20px;
+    width: 20px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: 0.4s;
+    border-radius: 50%;
+}
+
+input:checked+.slider {
+    background-color: #2196f3;
+}
+
+input:checked+.slider:before {
+    transform: translateX(26px);
+}
+
+.button {
+    display: inline-block;
+    width: 100%;
+    color: #fff;
+    padding: 0.75rem;
+    border: none;
+    border-radius: 7px;
+    font-size: 1rem;
+    font-weight: bold;
+    text-align: center;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.remove-button {
+    border-radius: 50%;
+    background-color: #5a5d85;
+    border: none;
+    color: white;
+    margin-left: 4px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.remove-button:hover {
+    background-color: #333989;
+}
+
+.ignore-patterns {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 5px;
+    margin-top: 10px;
+}
+
+.ignore-pattern {
+    padding: 5px 10px;
+    display: inline-flex;
+    align-items: center;
+    background-color: #303037;
+    border-radius: 10px;
+    font-weight: bold;
+}
+
+.btn-grad {
+    background-image: linear-gradient(to right, #16222a 0%, #3a6073 51%, #16222a 100%);
+    text-align: center;
+    text-transform: uppercase;
+    transition: 0.5s;
+    background-size: 200% auto;
+    color: white;
+}
+
+.btn-grad:hover {
+    background-position: right center;
+    text-decoration: none;
+}
+
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+    margin-left: 8px;
+    font-weight: bold;
+    color: #888;
+}
+
+.tooltip .tooltip-text {
+    visibility: hidden;
+    width: 250px;
+    background-color: #252526;
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -125px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-weight: normal;
+    font-size: 0.8rem;
+    border: 1px solid #3e3e3e;
+}
+
+.tooltip:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}
+
+.segmented-control {
+    display: flex;
+    width: 100%;
+    border-radius: 7px;
+    background: rgba(30, 30, 30, 0.9);
+    padding: 4px;
+    box-sizing: border-box;
+}
+
+.segmented-control input[type='radio'] {
+    display: none;
+}
+
+.segmented-control label {
+    flex: 1;
+    text-align: center;
+    padding: 8px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease, color 0.3s ease;
+    font-weight: normal;
+    margin: 0;
+    color: #aaa;
+    justify-content: center;
+}
+
+.segmented-control input[type='radio']:checked+label {
+    background-color: #3a6073;
+    color: white;
+    font-weight: bold;
+}
+
+.button-group {
+    display: flex;
+    gap: 10px;
+    margin-top: 1rem;
+}
+
+.button-group .button {
+    margin: 0;
+}
+
+.btn-secondary {
+    background-image: linear-gradient(to right, #485563 0%, #29323c 51%, #485563 100%);
+    text-align: center;
+    text-transform: uppercase;
+    transition: 0.5s;
+    background-size: 200% auto;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-position: right center;
+}
+
+.footer-text {
+    text-align: center;
+    margin-top: 1.5rem;
+    font-size: 0.8rem;
+    color: #888;
+}
+
+.btn-outline {
+    background-color: transparent;
+    border: 1px solid #5a5a5f;
+    color: #ccc;
+    margin-top: 1.5rem;
+}
+
+.btn-outline:hover {
+    background-color: rgba(90, 90, 95, 0.3);
+}
+
+#resize-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(30, 30, 30, 0.95);
+    color: #fff;
+    display: none;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    z-index: 2000;
+}
+
+#resize-overlay-icon {
+    font-size: 48px;
+    margin-bottom: 20px;
+}
+
+#resize-overlay p {
+    font-size: 1.2em;
+}
+
+@media (max-width: 350px) {
+    .input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    h1 {
+        font-size: 1.5rem;
+    }
+
+    .container {
+        padding: 10px;
+    }
+}
+```
+
+this is src/ui/pages/control-panel.html:
+```
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="default-src 'none'; style-src #{cspSource}; script-src #{cspSource};"
+		/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link href="#{stylesUri}" rel="stylesheet" />
+		<title>File Harmony</title>
+	</head>
+	<body>
+		<div class="container">
+			<h1>File Harmony</h1>
+			<!-- All other form groups are unchanged -->
+			<div class="form-group">
+				<label for="sourcePath">Source Path</label>
+				<div class="input-group">
+					<input type="text" id="sourcePath" placeholder="Select a source directory..." readonly />
+					<button class="browse-button" id="browseSource">Browse...</button>
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="targetPath">Target Path</label>
+				<div class="input-group">
+					<input type="text" id="targetPath" placeholder="Select a target directory..." readonly />
+					<button class="browse-button" id="browseTarget">Browse...</button>
+				</div>
+			</div>
+
+			<!-- --- MODIFIED IGNORE LIST SECTION --- -->
+			<div class="form-group">
+				<label for="ignorePatternInput">Add to Ignore List</label>
+				<div class="input-group">
+					<input type="text" id="ignorePatternInput" placeholder="e.g., node_modules, *.tmp, dist" />
+					<button class="add-button" id="addPatternButton">+</button>
+				</div>
+				<div class="ignore-patterns" id="ignoreList"></div>
+				<p style="font-size: small">
+					Supports glob patterns (e.g., <code>**/node_modules</code>, <code>*.log</code>).
+				</p>
+			</div>
+			<!-- --- END MODIFIED SECTION --- -->
+
+			<div class="form-group">
+				<label>
+					Sync Mode
+					<span class="tooltip">
+						(?)
+						<span class="tooltip-text">
+							<b>Smart (Default):</b> Overwrites files only if the source is newer. Faster and
+							recommended. <br /><br />
+							<b>Force Overwrite:</b> Overwrites all matching files in the target directory, ensuring an
+							exact replica. Slower but more thorough.
+						</span>
+					</span>
+				</label>
+				<div class="segmented-control">
+					<input type="radio" id="syncModeSmart" name="syncMode" value="smart" checked />
+					<label for="syncModeSmart">Smart</label>
+					<input type="radio" id="syncModeForce" name="syncMode" value="force" />
+					<label for="syncModeForce">Force Overwrite</label>
+				</div>
+			</div>
+			<div class="form-group">
+				<label for="syncStatus">Sync Status</label>
+				<label class="switch">
+					<input type="checkbox" id="syncStatus" />
+					<span class="slider"></span>
+				</label>
+			</div>
+			<div class="button-group">
+				<button class="button btn-secondary" id="syncNow">Sync Now</button>
+				<button class="button btn-grad" id="save">Save</button>
+			</div>
+			<button class="button btn-outline" id="viewLogButton">View Activity Log</button>
+			<p class="footer-text">Last synced: <span id="lastSyncedTimestamp">Never</span></p>
+		</div>
+
+		<!-- The resize overlay is unchanged -->
+		<div id="resize-overlay">
+			<div id="resize-overlay-icon">↔</div>
+			<p>Please widen the panel</p>
+		</div>
+
+		<script src="#{scriptUri}"></script>
+	</body>
+</html>
+
+```
+
+this is src/ui/pages/control-panel.js:
+```
+document.addEventListener('DOMContentLoaded', () => {
+	const vscode = acquireVsCodeApi();
+
+	// --- Local UI State ---
+	let currentIgnoreList = [];
+
+	// --- Elements ---
+	const sourcePathInput = document.getElementById('sourcePath');
+	const targetPathInput = document.getElementById('targetPath');
+	const syncStatusCheckbox = document.getElementById('syncStatus');
+	const ignoreListElement = document.getElementById('ignoreList');
+	const lastSyncedTimestamp = document.getElementById('lastSyncedTimestamp');
+	const viewLogButton = document.getElementById('viewLogButton');
+	const resizeOverlay = document.getElementById('resize-overlay');
+	const container = document.querySelector('.container');
+	// New elements for interactive ignore list
+	const ignorePatternInput = document.getElementById('ignorePatternInput');
+	const addPatternButton = document.getElementById('addPatternButton');
+
+	// --- Initial State Request ---
+	vscode.postMessage({ command: 'GET_STATE' });
+
+	// --- Functions ---
+	const rtf = new Intl.RelativeTimeFormat('en', { numeric: 'auto' });
+	const timeUnits = {
+		year: 31536000,
+		month: 2592000,
+		day: 86400,
+		hour: 3600,
+		minute: 60,
+		second: 1,
+	};
+
+	function getRelativeTime(isoString) {
+		if (!isoString) return 'Never';
+		const then = new Date(isoString);
+		const now = new Date();
+		const elapsed = (then.getTime() - now.getTime()) / 1000;
+
+		for (const unit in timeUnits) {
+			if (Math.abs(elapsed) > timeUnits[unit] || unit === 'second') {
+				return rtf.format(Math.round(elapsed / timeUnits[unit]), unit);
+			}
+		}
+		return 'Never';
+	}
+
+	function renderIgnoreList() {
+		ignoreListElement.innerHTML = '';
+		const uniqueIgnoreList = [...new Set(currentIgnoreList)];
+
+		uniqueIgnoreList.forEach(listItem => {
+			if (listItem) {
+				const div = document.createElement('div');
+				div.className = 'ignore-pattern';
+				div.textContent = listItem;
+
+				const removeButton = document.createElement('button');
+				removeButton.className = 'remove-button';
+				removeButton.textContent = 'x';
+				removeButton.addEventListener('click', () => {
+					// Update the local state and re-render
+					currentIgnoreList = currentIgnoreList.filter(p => p !== listItem);
+					renderIgnoreList();
+				});
+
+				div.appendChild(removeButton);
+				ignoreListElement.appendChild(div);
+			}
+		});
+	}
+
+	function addPattern() {
+		const newPattern = ignorePatternInput.value.trim();
+		if (newPattern && !currentIgnoreList.includes(newPattern)) {
+			currentIgnoreList.push(newPattern);
+			renderIgnoreList();
+		}
+		ignorePatternInput.value = '';
+		ignorePatternInput.focus();
+	}
+
+	// --- Event Listeners ---
+	addPatternButton.addEventListener('click', addPattern);
+	ignorePatternInput.addEventListener('keydown', event => {
+		if (event.key === 'Enter') {
+			event.preventDefault(); // Prevent form submission
+			addPattern();
+		}
+	});
+
+	document.getElementById('browseSource').addEventListener('click', () => {
+		vscode.postMessage({ command: 'SELECT_FOLDER', payload: { for: 'source' } });
+	});
+	document.getElementById('browseTarget').addEventListener('click', () => {
+		vscode.postMessage({ command: 'SELECT_FOLDER', payload: { for: 'target' } });
+	});
+	document.getElementById('save').addEventListener('click', () => {
+		const newState = {
+			sourcePath: sourcePathInput.value,
+			targetPath: targetPathInput.value,
+			ignoreList: currentIgnoreList, // Send the array from our local state
+			syncMode: document.querySelector('input[name="syncMode"]:checked').value,
+			syncStatus: syncStatusCheckbox.checked,
+		};
+		vscode.postMessage({ command: 'UPDATE_STATE', value: newState });
+	});
+	document.getElementById('syncNow').addEventListener('click', () => {
+		vscode.postMessage({ command: 'SYNC_NOW' });
+	});
+	viewLogButton.addEventListener('click', () => {
+		vscode.postMessage({ command: 'SHOW_LOG_VIEWER' });
+	});
+
+	// --- Message Listener from Extension ---
+	window.addEventListener('message', event => {
+		const message = event.data;
+		switch (message.command) {
+			case 'UPDATE_WEBVIEW':
+				sourcePathInput.value = message.value.sourcePath;
+				targetPathInput.value = message.value.targetPath;
+				syncStatusCheckbox.checked = message.value.syncStatus;
+				document.querySelector(`input[name="syncMode"][value="${message.value.syncMode}"]`).checked = true;
+				lastSyncedTimestamp.textContent = getRelativeTime(message.value.lastSynced);
+				// Set the local state and render the pills
+				currentIgnoreList = message.value.ignoreList;
+				renderIgnoreList();
+				break;
+			case 'FOLDER_SELECTED':
+				if (message.payload.for === 'source') {
+					sourcePathInput.value = message.payload.path;
+				} else if (message.payload.for === 'target') {
+					targetPathInput.value = message.payload.path;
+				}
+				break;
+		}
+	});
+
+	// --- Resize Observer for Minimum Width ---
+	const resizeObserver = new ResizeObserver(entries => {
+		for (const entry of entries) {
+			const minWidth = 500;
+			if (entry.contentRect.width < minWidth) {
+				resizeOverlay.style.display = 'flex';
+				container.style.display = 'none';
+			} else {
+				resizeOverlay.style.display = 'none';
+				container.style.display = 'block';
+			}
+		}
+	});
+
+	resizeObserver.observe(document.body);
+});
+
+```
+
+this is src/utils.ts:
+```
+import * as vscode from 'vscode';
+
+export const informStatus = (currStatus: boolean) => {
+	const watcherActiveMessage = 'File Harmony: Watch Status Active!';
+	const watcherInactiveMessage = 'File Harmony: Watch Status Inactive!';
+
+	currStatus ? showInfoMessage(watcherActiveMessage) : showWarningMessage(watcherInactiveMessage);
+};
+
+export const showInfoMessage = (message: string) => {
+	vscode.window.showInformationMessage(message);
+};
+
+export const showWarningMessage = (warning: string) => {
+	vscode.window.showWarningMessage(warning);
+};
+
+export const showErrorMessage = (error: string) => {
+	vscode.window.showErrorMessage(error, { modal: false }, 'Dismiss');
+};
+
+```
+
+this is tsconfig.json:
+```
+{
+	"compilerOptions": {
+		"module": "Node16",
+		"target": "ES2022",
+		"outDir": "out",
+		"lib": [
+			"ES2022"
+		],
+		"sourceMap": true,
+		"rootDir": "src",
+		"strict": true
+		/* Additional Checks */
+		// "noImplicitReturns": true,
+		// "noFallthroughCasesInSwitch": true,
+		// "noUnusedParameters": true,
+	}
+}
+```

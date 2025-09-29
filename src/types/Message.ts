@@ -16,4 +16,22 @@ export interface SelectFolderMessage {
 	};
 }
 
-export type Message = UpdateStateMessage | GetStateMessage | SelectFolderMessage;
+export interface SyncNowMessage {
+	command: 'SYNC_NOW';
+}
+
+export interface LogUpdatedMessage {
+	command: 'LOG_UPDATED';
+	payload: string;
+}
+
+export interface ShowLogViewerMessage {
+	command: 'SHOW_LOG_VIEWER';
+}
+
+export type Message =
+	| UpdateStateMessage
+	| GetStateMessage
+	| SelectFolderMessage
+	| SyncNowMessage
+	| ShowLogViewerMessage;

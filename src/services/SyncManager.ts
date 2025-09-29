@@ -16,6 +16,11 @@ class SyncManager {
 		this.logger = logger;
 	}
 
+	private _updateLastSyncedTimestamp() {
+		const newTimestamp = new Date().toISOString();
+		this.stateManager.updateState({ lastSynced: newTimestamp });
+	}
+
 	async initialDirectorySync() {
 		const { sourcePath, targetPath, ignoreList, syncStatus, syncMode } = this.stateManager.getState();
 
@@ -29,6 +34,7 @@ class SyncManager {
 
 		await this.recursiveSync(resolvedSourcePath, resolvedTargetPath, ignoreList, resolvedSourcePath, syncMode);
 		this.logger.info('Initial directory sync completed.');
+		this._updateLastSyncedTimestamp();
 	}
 
 	private async recursiveSync(
@@ -125,6 +131,7 @@ class SyncManager {
 			fs.copyFile(filePath, targetFile, err => {
 				if (err) this.logger.error(`Error syncing file ${relativePath}:`, err);
 				else this.logger.info(`Synced file: ${relativePath}`);
+				this._updateLastSyncedTimestamp();
 			});
 		};
 
@@ -149,8 +156,12 @@ class SyncManager {
 
 		if (fs.existsSync(targetFile)) {
 			fs.unlink(targetFile, err => {
-				if (err) this.logger.error(`Error deleting file ${relativePath}:`, err);
-				else this.logger.info(`Deleted file: ${relativePath}`);
+				if (err) {
+					this.logger.error(`Error deleting file ${relativePath}:`, err);
+				} else {
+					this.logger.info(`Deleted file: ${relativePath}`);
+					this._updateLastSyncedTimestamp();
+				}
 			});
 		}
 	}

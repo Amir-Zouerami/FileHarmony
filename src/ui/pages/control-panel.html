@@ -10,11 +10,10 @@
 		<link href="#{stylesUri}" rel="stylesheet" />
 		<title>File Harmony</title>
 	</head>
-
 	<body>
 		<div class="container">
 			<h1>File Harmony</h1>
-
+			<!-- All other form groups are unchanged -->
 			<div class="form-group">
 				<label for="sourcePath">Source Path</label>
 				<div class="input-group">
@@ -22,7 +21,6 @@
 					<button class="browse-button" id="browseSource">Browse...</button>
 				</div>
 			</div>
-
 			<div class="form-group">
 				<label for="targetPath">Target Path</label>
 				<div class="input-group">
@@ -31,18 +29,19 @@
 				</div>
 			</div>
 
+			<!-- --- MODIFIED IGNORE LIST SECTION --- -->
 			<div class="form-group">
-				<label for="ignoreListInput">
-					Ignore List <span class="extra-small-mono-text">&nbsp;(comma-separated)</span>
-				</label>
-				<input type="text" id="ignoreListInput" placeholder="e.g., node_modules, **/*.tmp, dist" />
+				<label for="ignorePatternInput">Add to Ignore List</label>
+				<div class="input-group">
+					<input type="text" id="ignorePatternInput" placeholder="e.g., node_modules, *.tmp, dist" />
+					<button class="add-button" id="addPatternButton">+</button>
+				</div>
 				<div class="ignore-patterns" id="ignoreList"></div>
 				<p style="font-size: small">
 					Supports glob patterns (e.g., <code>**/node_modules</code>, <code>*.log</code>).
 				</p>
 			</div>
-
-			<div class="break-horizontal-line"></div>
+			<!-- --- END MODIFIED SECTION --- -->
 
 			<div class="form-group">
 				<label>
@@ -57,18 +56,13 @@
 						</span>
 					</span>
 				</label>
-
 				<div class="segmented-control">
 					<input type="radio" id="syncModeSmart" name="syncMode" value="smart" checked />
 					<label for="syncModeSmart">Smart</label>
-
 					<input type="radio" id="syncModeForce" name="syncMode" value="force" />
 					<label for="syncModeForce">Force Overwrite</label>
 				</div>
 			</div>
-
-			<div class="break-horizontal-line"></div>
-
 			<div class="form-group">
 				<label for="syncStatus">Sync Status</label>
 				<label class="switch">
@@ -76,8 +70,18 @@
 					<span class="slider"></span>
 				</label>
 			</div>
+			<div class="button-group">
+				<button class="button btn-secondary" id="syncNow">Sync Now</button>
+				<button class="button btn-grad" id="save">Save</button>
+			</div>
+			<button class="button btn-outline" id="viewLogButton">View Activity Log</button>
+			<p class="footer-text">Last synced: <span id="lastSyncedTimestamp">Never</span></p>
+		</div>
 
-			<button class="button btn-grad" id="save">Save</button>
+		<!-- The resize overlay is unchanged -->
+		<div id="resize-overlay">
+			<div id="resize-overlay-icon">↔</div>
+			<p>Please widen the panel</p>
 		</div>
 
 		<script src="#{scriptUri}"></script>

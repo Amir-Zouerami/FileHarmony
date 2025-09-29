@@ -2,14 +2,24 @@ import * as vscode from 'vscode';
 
 export class Logger {
 	private readonly _outputChannel: vscode.OutputChannel;
+	private _uiLogCallback: ((message: string) => void) | undefined;
 
 	constructor(channelName: string) {
 		this._outputChannel = vscode.window.createOutputChannel(channelName);
 	}
 
+	public setUiLogCallback(callback: (message: string) => void) {
+		this._uiLogCallback = callback;
+	}
+
 	private log(level: 'INFO' | 'WARN' | 'ERROR', message: string) {
 		const timestamp = new Date().toLocaleTimeString();
-		this._outputChannel.appendLine(`[${level} - ${timestamp}] ${message}`);
+		const logMessage = `[${level} - ${timestamp}] ${message}`;
+		this._outputChannel.appendLine(logMessage);
+
+		if (this._uiLogCallback) {
+			this._uiLogCallback(logMessage);
+		}
 	}
 
 	public info(message: string) {
@@ -27,21 +37,6 @@ export class Logger {
 			errorMessage += `\nDetails: ${errorDetails}`;
 		}
 		this.log('ERROR', errorMessage);
-	}
-
-	public showToast(message: string) {
-		this.info(message);
-
-		vscode.window.withProgress(
-			{
-				location: vscode.ProgressLocation.Notification,
-				title: `File Harmony: ${message}`,
-				cancellable: false,
-			},
-			async _progress => {
-				await new Promise(resolve => setTimeout(resolve, 2000));
-			},
-		);
 	}
 
 	public showInfo(message: string) {

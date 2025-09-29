@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="default-src 'none'; style-src #{cspSource}; script-src #{cspSource};"
+		/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link href="#{stylesUri}" rel="stylesheet" />
+		<title>File Harmony Log</title>
+	</head>
+	<body>
+		<div class="log-header">
+			<h2>Activity Log</h2>
+			<button id="clearLogButton" class="clear-log-button">Clear Logs</button>
+		</div>
+
+		<div id="log-container"></div>
+
+		<script src="#{scriptUri}"></script>
+	</body>
+</html>
