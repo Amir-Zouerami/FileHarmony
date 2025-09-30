@@ -1,32 +1,63 @@
-import WorkspaceStateManager from './services/WorkspaceStateManager';
-import FileHarmonyViewProvider from './ui/FileHarmonyViewProvider';
-import { StatusBarManager } from './statusBar/StatusBarManager';
-import MessageHandler from './ui/MessageHandler';
-import SyncManager from './services/SyncManager';
-import { Logger } from './logger/Logger';
-import { LogViewerPanelManager } from './ui/LogViewerPanelManager';
+import ControlPanelViewProvider from './view/control-panel/ControlPanelViewProvider';
+import { LogViewerPanelManager } from './view/log-viewer/LogViewerPanelManager';
+import { PreviewPanelManager } from './view/preview-panel/PreviewPanelManager';
+import { DirectoryNotFoundError, InvalidPathError } from './shared/errors';
+import { StatusBarManager } from './view/status-bar/StatusBarManager';
+import SettingsService from './core/state/SettingsService';
+import { WEBVIEW_MESSAGES_TO } from './shared/constants';
+import { VScodeAdapter } from './shared/vscode-adapter';
+import SyncManager from './core/sync/SyncManager';
+import { VIEW_IDS } from './shared/constants';
+import { registerCommands } from './commands';
+import { Logger } from './shared/Logger';
 import * as vscode from 'vscode';
 
+/**
+ * The main entry point for the extension.
+ * This function is called by VS Code when the extension is activated. It is responsible for
+ * initializing all services, registering commands and UI components (like the webview provider),
+ * and starting the initial sync if configured to do so.
+ *
+ * @param context The extension context provided by VS Code.
+ */
 export async function activate(context: vscode.ExtensionContext) {
-	const logger = new Logger('File Harmony');
+	const vscodeAdapter = new VScodeAdapter();
+	const logger = new Logger('File Harmony', vscodeAdapter);
 	const statusBarManager = new StatusBarManager();
-	const stateManager = new WorkspaceStateManager(context);
-	const syncManager = new SyncManager(stateManager, logger);
-	const messageHandler = new MessageHandler(stateManager, syncManager, logger);
+	const settingsService = new SettingsService(context);
+	await settingsService.performOneTimeMigration();
 
-	// --- Wire up the Logger to the new LogViewerPanelManager ---
+	const syncManager = new SyncManager(settingsService, logger, statusBarManager, vscodeAdapter);
+
+	const controlPanelViewProvider = new ControlPanelViewProvider(
+		context,
+		settingsService,
+		syncManager,
+		logger,
+		vscodeAdapter,
+	);
+
 	logger.setUiLogCallback(logMessage => {
 		const match = logMessage.match(/\[(INFO|WARN|ERROR)/);
 		const level = (match ? match[1] : 'INFO') as 'INFO' | 'WARN' | 'ERROR';
-		LogViewerPanelManager.postMessage({ command: 'log', level, message: logMessage });
+		LogViewerPanelManager.postMessage({ command: WEBVIEW_MESSAGES_TO.LOG, level, message: logMessage });
 	});
 
-	const provider = new FileHarmonyViewProvider(context, messageHandler, stateManager);
-	context.subscriptions.push(vscode.window.registerWebviewViewProvider('fileHarmonyView', provider));
-
-	// --- Initial Status on Activation ---
-	const { syncStatus } = stateManager.getState();
+	const { syncStatus } = settingsService.getState();
 	statusBarManager.update(syncStatus ? 'active' : 'inactive');
+
+	context.subscriptions.push(
+		vscode.window.registerWebviewViewProvider(VIEW_IDS.CONTROL_PANEL, controlPanelViewProvider),
+	);
+
+	registerCommands(context, {
+		syncManager,
+		statusBarManager,
+		settingsService,
+		controlPanelViewProvider,
+		logger,
+		extensionUri: context.extensionUri,
+	});
 
 	if (syncStatus) {
 		try {
@@ -35,48 +66,25 @@ export async function activate(context: vscode.ExtensionContext) {
 			await syncManager.addSyncWatcher();
 			statusBarManager.update('active');
 		} catch (err) {
-			logger.showError('Failed during startup sync.', err);
+			if (err instanceof DirectoryNotFoundError || err instanceof InvalidPathError) {
+				logger.showError(err.message);
+			} else {
+				logger.showError('Failed during startup sync.', err);
+			}
+
 			statusBarManager.update('error', 'Startup sync failed.');
 		}
 	}
 
-	// --- COMMAND REGISTRATION ---
-	context.subscriptions.push(
-		vscode.commands.registerCommand('fileHarmony.showLogViewer', () => {
-			LogViewerPanelManager.createOrShow(context.extensionUri);
-		}),
-
-		vscode.commands.registerCommand('fileHarmony.toggleSyncStatus', async () => {
-			const newSyncStatus = await syncManager.toggleSyncStatus();
-			stateManager.updateState({ syncStatus: newSyncStatus });
-			provider.updateWebview();
-			logger.showInfo(`Sync Watcher ${newSyncStatus ? 'Activated' : 'Deactivated'}.`);
-			statusBarManager.update(newSyncStatus ? 'active' : 'inactive');
-		}),
-
-		vscode.commands.registerCommand('fileHarmony.getWatchStatus', () => {
-			const currStatus = syncManager.getCurrWatchStatus();
-			logger.showInfo(`Watch Status is currently: ${currStatus ? 'Active' : 'Inactive'}.`);
-		}),
-
-		vscode.commands.registerCommand('fileHarmony.syncNowWithFeedback', async () => {
-			statusBarManager.update('syncing');
-			try {
-				await syncManager.initialDirectorySync();
-				const newState = stateManager.getState();
-				provider.updateWebviewWithState(newState);
-			} catch (err) {
-				logger.error('Manual sync failed.', err);
-			} finally {
-				const currentSyncStatus = syncManager.getCurrWatchStatus();
-				statusBarManager.update(currentSyncStatus ? 'active' : 'inactive');
-			}
-		}),
-	);
-
-	context.subscriptions.push(logger, statusBarManager, syncManager, provider);
+	context.subscriptions.push(logger, statusBarManager, syncManager, controlPanelViewProvider);
 }
 
+/**
+ * The exit point for the extension.
+ * This function is called by VS Code when the extension is deactivated. It is responsible
+ * for cleaning up any disposable resources, such as webview panels.
+ */
 export function deactivate() {
 	LogViewerPanelManager.dispose();
+	PreviewPanelManager.dispose();
 }

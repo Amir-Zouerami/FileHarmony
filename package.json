@@ -7,7 +7,7 @@
 		"name": "Amir Zouerami",
 		"url": "https://github.com/Amir-Zouerami"
 	},
-	"version": "1.1.0",
+	"version": "2.1.0",
 	"engines": {
 		"vscode": "^1.54.0"
 	},
@@ -21,22 +21,12 @@
 	"icon": "icon.png",
 	"repository": {
 		"type": "git",
-		"url": "git@github.com:Amir-Zouerami/FileHarmony.git"
+		"url": "https://github.com/Amir-Zouerami/FileHarmony.git"
 	},
 	"bugs": {
 		"url": "https://github.com/Amir-Zouerami/FileHarmony/issues"
 	},
 	"contributes": {
-		"commands": [
-			{
-				"command": "fileHarmony.toggleSyncStatus",
-				"title": "FileHarmony (FH): Toggle Sync Watcher"
-			},
-			{
-				"command": "fileHarmony.getWatchStatus",
-				"title": "FileHarmony (FH): Show Current Watch Status"
-			}
-		],
 		"viewsContainers": {
 			"activitybar": [
 				{
@@ -54,6 +44,60 @@
 					"name": "Control Panel"
 				}
 			]
+		},
+		"configuration": {
+			"title": "File Harmony",
+			"properties": {
+				"fileHarmony.sourcePath": {
+					"type": "string",
+					"default": "",
+					"description": "The source directory to synchronize from.",
+					"scope": "resource"
+				},
+				"fileHarmony.targetPath": {
+					"type": "string",
+					"default": "",
+					"description": "The target directory to synchronize to.",
+					"scope": "resource"
+				},
+				"fileHarmony.ignoreList": {
+					"type": "array",
+					"default": [
+						"**/node_modules",
+						"**/.git",
+						"**/.vscode",
+						"**/.idea",
+						"**/dist"
+					],
+					"description": "An array of glob patterns for files and directories to ignore during synchronization.",
+					"items": {
+						"type": "string"
+					},
+					"scope": "resource"
+				},
+				"fileHarmony.syncMode": {
+					"type": "string",
+					"default": "smart",
+					"enum": [
+						"smart",
+						"force"
+					],
+					"description": "The core strategy for the sync operation. 'smart' compares files before copying, while 'force' overwrites all matching files.",
+					"scope": "resource"
+				},
+				"fileHarmony.conflictResolution": {
+					"type": "string",
+					"default": "Source Wins",
+					"enum": [
+						"Source Wins",
+						"Target Wins",
+						"Log Error and Skip",
+						"Ask"
+					],
+					"description": "Determines the action to take when a conflict is detected in 'smart' sync mode.",
+					"scope": "resource"
+				}
+			}
 		}
 	},
 	"scripts": {

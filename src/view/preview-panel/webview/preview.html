@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta
+			http-equiv="Content-Security-Policy"
+			content="default-src 'none'; style-src #{cspSource}; script-src #{cspSource};"
+		/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<link href="#{stylesUri}" rel="stylesheet" />
+		<title>Sync Preview</title>
+	</head>
+	<body>
+		<div class="header">
+			<h1>Sync Preview</h1>
+			<p>
+				These changes will be applied when you run "Sync Now".
+				<span id="summary"></span>
+			</p>
+		</div>
+		<div id="changes-container"></div>
+		<script src="#{scriptUri}"></script>
+	</body>
+</html>

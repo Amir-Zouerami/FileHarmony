@@ -1,0 +1,87 @@
+body {
+    background-color: var(--vscode-editor-background, #1f2428);
+    color: var(--vscode-editor-foreground, #d4d4d4);
+    font-family: 'Segoe UI', 'Roboto', sans-serif;
+    padding: 1rem 2rem;
+}
+
+.header {
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--vscode-editorWidget-border, #454545);
+}
+
+h1,
+h2 {
+    margin-top: 0;
+    font-weight: 300;
+}
+
+h2 {
+    margin-top: 1.5rem;
+    font-size: 1.2rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--vscode-input-border, #454545);
+}
+
+.change-list {
+    list-style: none;
+    padding-left: 0;
+}
+
+.change-item {
+    display: flex;
+    align-items: center;
+    padding: 0.4rem 0.5rem;
+    border-radius: 4px;
+    margin-bottom: 2px;
+}
+
+.change-item.updateable:hover {
+    background-color: var(--vscode-list-hoverBackground, #2a2d2e);
+    cursor: pointer;
+}
+
+.change-type {
+    font-weight: bold;
+    width: 220px;
+    /* Increased width for longer labels */
+    flex-shrink: 0;
+    text-transform: capitalize;
+    /* More readable than uppercase */
+}
+
+.change-type.create {
+    color: #3794ff;
+    /* Blue */
+}
+
+.change-type.update {
+    color: #f5d76e;
+    /* Yellow */
+}
+
+.change-type.delete {
+    color: #e74c3c;
+    /* Red */
+}
+
+/* --- NEW STYLES --- */
+.change-type.conflict {
+    color: #e74c3c;
+    /* Red - High severity */
+}
+
+.change-type.warning_only_in_target {
+    color: #f39c12;
+    /* Orange - Medium severity */
+}
+
+/* --- END NEW STYLES --- */
+
+.change-path {
+    word-break: break-all;
+}
+
+#summary {
+    font-weight: bold;
+}
