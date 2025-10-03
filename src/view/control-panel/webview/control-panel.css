@@ -10,6 +10,7 @@ body {
     justify-content: center;
     height: 100vh;
     overflow: hidden;
+    font-size: 15px;
 }
 
 .container {
@@ -62,7 +63,6 @@ input[type='text']:focus {
     gap: 8px;
 }
 
-/* --- NEW STYLE FOR THE ADD BUTTON --- */
 .add-button {
     flex-shrink: 0;
     width: 38px;
@@ -81,8 +81,6 @@ input[type='text']:focus {
 .add-button:hover {
     background-color: #4a7a91;
 }
-
-/* --- END NEW STYLE --- */
 
 .browse-button {
     padding: 0.8rem 1rem;
@@ -358,7 +356,6 @@ input:checked+.slider:before {
 .secondary-button-group .button {
     margin: 0;
     flex: 1;
-    /* Make buttons fill the space */
 }
 
 .btn-outline-danger {
@@ -385,6 +382,20 @@ input:checked+.slider:before {
 
 .button:disabled:hover {
     background-color: var(--vscode-button-secondaryBackground);
+}
+
+@media (max-width: 550px) {
+    body {
+        font-size: 14px;
+    }
+
+    .container {
+        padding: 15px;
+    }
+
+    h1 {
+        font-size: 1.8rem;
+    }
 }
 
 @media (max-width: 350px) {
